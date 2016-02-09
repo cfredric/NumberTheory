@@ -860,17 +860,6 @@ gaussianIntTests =
             "gFactorize failed on 1 1"
     ] `using` parList rdeepseq
 
-continuedFractionTests :: [Either String ()]
-continuedFractionTests =
-    [ assertProperty sampleQuadratics
-        (\(m, d, q) -> abs
-            ((((fromIntegral m) + sqrti d) / (fromIntegral q)) -
-            (fromRational . continuedFractionToRational $ continuedFractionFromQuadratic m d q))
-            < 0.00000000000001)
-        "fromRational . continuedFractionToRational . continuedFractionFromQuadratic isn't an identity!"
-
-    ] `using` parList rdeepseq
-
 tests :: Either String [()]
 tests = sequence $ concat (
     [ pythTests
@@ -878,7 +867,6 @@ tests = sequence $ concat (
     , zModMTests
     , arithmeticFnsTests
     , gaussianIntTests
-    , continuedFractionTests
     ] `using` parList rdeepseq)
 
 main :: IO ()
