@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module NumTheory (
+module NumberTheory (
     -- pythagorean triples
     pythSide,
     pythLeg,
