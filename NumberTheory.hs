@@ -1,5 +1,75 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module NumTheory where
+module NumTheory (
+    -- pythagorean triples
+    pythSide,
+    pythLeg,
+    pythHyp,
+    primPythHyp,
+    primPythLeg,
+    -- Functions in Z mod m
+    canon,
+    evalPoly,
+    polyCong,
+    exponentiate,
+    rsaGenKeys,
+    rsaEval,
+    units,
+    nilpotents,
+    idempotents,
+    roots,
+    almostRoots,
+    order,
+    orders,
+    expressAsRoots,
+    powerCong,
+    ilogBM,
+    -- functions in Z
+    divisors,
+    factorize,
+    primes,
+    isPrime,
+    areCoprime,
+    legendre,
+    kronecker,
+    -- arithmetic functions
+    totient,
+    tau,
+    sigma,
+    mobius,
+    littleOmega,
+    bigOmega,
+    -- Gaussian Integer functions
+    GaussInt((:+)),
+    real,
+    imag,
+    conjugate,
+    magnitude,
+    gPlus,
+    gMinus,
+    gMultiply,
+    gDivide,
+    gMod,
+    gIsPrime,
+    gPrimes,
+    gGCD,
+    gFindPrime,
+    gExponentiate,
+    gFactorize,
+    -- assorted combinatorics
+    factorial,
+    fibonacci,
+    permute,
+    choose,
+    enumerate,
+    asSumOfSquares,
+    -- Continued fraction functions
+    ContinuedFraction(Finite, Infinite),
+    continuedFractionFromDouble,
+    continuedFractionFromRational,
+    continuedFractionFromQuadratic,
+    continuedFractionToRational,
+    continuedFractionToFractional
+) where
 
 import           Control.Parallel.Strategies    (rdeepseq, parList, using)
 import           Data.List                      ((\\), delete, findIndex, genericLength, nub, sort)
