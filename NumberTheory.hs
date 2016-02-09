@@ -641,81 +641,16 @@ assertProperty list p errorString = if all p list then Right () else Left errorS
 
 samplePrimes :: [Integer]
 samplePrimes = takeWhile (<= 100) Primes.primes
-sampleComposites :: [Integer]
-sampleComposites = filter (not . flip elem samplePrimes) [1 .. 100]
 sampleMixed :: [Integer]
 sampleMixed = [1..100]
+sampleComposites :: [Integer]
+sampleComposites = filter (not . flip elem samplePrimes) [1 .. 100]
 sampleMixedGaussInts :: [GaussInt Integer]
 sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
 sampleQuadratics :: [(Integer, Integer, Integer)]
 sampleQuadratics = [ (m, d, q) | m <- [0 .. 20], d <- [0 .. 20], q <- [1 .. 20]]
 
 
-zModMTests :: [Either String ()]
-zModMTests =
-    [ assertProperty sampleMixed
-            (\n -> let m = 37
-                       n' = canon n m
-                   in n' >= 0 && n' < m && n `mod` m == n')
-            "canon failed: not within bounds, or not congruent"
-    , assertProperty (map negate sampleMixed)
-            (\n -> let m = 37
-                       n' = canon n m
-                   in n' >= 0 && n' < m && (n' - n) `mod` 37 == 0)
-            "canon failed for negative integers"
-    , assert (evalPoly 5 3 [4, 5, 6] == (2 :: Integer))
-            "evalPoly failed"
-    , assert (polyCong 5 [4, 5, 6] == ([1, 4] :: [Integer]))
-            "polyCong failed"
-    , assert (exponentiate 9 12 6 == (3 :: Integer))
-            "exponentiate 9 12 6 failed"
-    , assert (exponentiate (-9) 12 6 == (3 :: Integer))
-            "exponentiate with negative failed"
-    , assert (fromRight $ do
-                    keyPairs <- rsaGenKeys 37 (41 :: Integer)
-                    let results = map (\((_, n), (_, n')) -> n == n') keyPairs
-                    return $ and results
-                )
-            "rsaGenKeys: n != n'"
-    , assert (fromRight $ do
-                    keyPairs <- rsaGenKeys 37 41
-                    let results = map (\((pubk, n), (privk, _)) -> canon (privk * pubk) (totient n) == (1 :: Integer)) keyPairs
-                    return $ and results
-                )
-            "rsaGenKeys: e*d != 1 (mod phi(n))"
-    , assert (fromRight $ do
-                    let text = (77 :: Integer)
-                    keyPairs <- rsaGenKeys 19 23
-                    ciphers <- sequence $ map (\(pub, _) -> rsaEval pub text) keyPairs
-                    plains <- sequence $ zipWith (\(_, priv) cipher -> rsaEval priv cipher) keyPairs ciphers
-                    let results = zipWith (==) plains $ repeat text
-                    return $ and results
-                )
-            "rsaEval: public and private keys were not inverses!"
-    , assertProperty sampleMixed
-            (\n -> let us = units n
-                   in and $ map (\u -> any (\u' -> canon (u * u') n == 1) us) us)
-            "units: some unit not invertible!"
-    , assertProperty sampleMixed
-            (\n -> let ns = map fromIntegral $ nilpotents n
-                       iteratedLists = map (\x -> take (fromIntegral n) $ iterate (\l -> canon (l * x) n) x) ns
-                   in and $ map (\xs -> any (== 0) xs) iteratedLists)
-            "nilpotents: not every element is nilpotent"
-    , assertProperty sampleMixed
-            (\n -> let is = idempotents n
-                   in and $ map (\i -> canon (i * i) n == i) is)
-            "idempotents: not every element is idempotent"
-    , assert (roots (17 :: Integer) == [3, 5, 6, 7, 10, 11, 12, 14])
-            "roots 17 failed"
-    , assert (almostRoots (15 :: Integer) == [2, 7, 8, 13])
-            "almostRoots 15 failed"
-    , assert (orders (15 :: Integer) == [1, 4, 2, 4, 4, 2, 4, 2])
-            "orders 15 failed"
-    , assert (expressAsRoots (13 :: Integer) 15 == [(-2, 1), (7, 3), (-8, 3), (13, 1)])
-            "expressAsRoots 13 15 failed"
-    , assert (powerCong (11 :: Integer) 3 5 == [2])
-            "powerCong 11 3 5 failed"
-    ] `using` parList rdeepseq
 
 zTests :: [Either String ()]
 zTests =
@@ -854,7 +789,6 @@ gaussianIntTests =
 tests :: Either String [()]
 tests = sequence $ concat (
     [ zTests
-    , zModMTests
     , arithmeticFnsTests
     , gaussianIntTests
     ] `using` parList rdeepseq)
