@@ -7,7 +7,16 @@ main :: IO Counts
 main = runTestTT tests
 
 tests :: Test
-tests = TestList [TestLabel "Continued Fraction Tests" continuedFractionTests]
+tests = TestList [ TestLabel "Continued Fraction Tests" continuedFractionTests
+                , TestLabel "Pythagorean Triples Tests" pythTests
+                ]
+
+pythTests :: Test
+pythTests = TestList $
+    [ TestCase $ assertEqual "test pythSide" [(35, 12, 37),(37, 684, 685)] (pythSide (37 :: Int))
+    , TestCase $ assertEqual "test pythLeg" [(15, 8, 17),(15, 20, 25),(15, 36, 39),(15, 112, 113)] (pythLeg (15 :: Int))
+    , TestCase $ assertEqual "test pythHyp" [(7, 24, 25),(15, 20, 25)] (pythHyp (25 :: Int))
+    ]
 
 continuedFractionTests :: Test
 continuedFractionTests = TestList $

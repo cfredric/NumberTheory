@@ -650,15 +650,6 @@ sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 
 sampleQuadratics :: [(Integer, Integer, Integer)]
 sampleQuadratics = [ (m, d, q) | m <- [0 .. 20], d <- [0 .. 20], q <- [1 .. 20]]
 
-pythTests :: [Either String ()]
-pythTests =
-    [ assert (pythSide (37 :: Int) == [(35, 12, 37),(37, 684, 685)])
-            "pythSide failed"
-    , assert (pythLeg (15 :: Int) == [(15, 8, 17),(15, 20, 25),(15, 36, 39),(15, 112, 113)])
-            "pythLeg failed"
-    , assert (pythHyp (25 :: Int) == [(7, 24, 25),(15, 20, 25)])
-            "pythHyp failed"
-    ] `using` parList rdeepseq
 
 zModMTests :: [Either String ()]
 zModMTests =
@@ -862,8 +853,7 @@ gaussianIntTests =
 
 tests :: Either String [()]
 tests = sequence $ concat (
-    [ pythTests
-    , zTests
+    [ zTests
     , zModMTests
     , arithmeticFnsTests
     , gaussianIntTests
