@@ -651,54 +651,6 @@ sampleQuadratics :: [(Integer, Integer, Integer)]
 sampleQuadratics = [ (m, d, q) | m <- [0 .. 20], d <- [0 .. 20], q <- [1 .. 20]]
 
 
-
-zTests :: [Either String ()]
-zTests =
-    [ assertProperty sampleMixed
-            (\n -> let divs = divisors n
-                   in and $ map (\d -> n `mod` d == 0) divs)
-            "divisors: not everything divides evenly"
-    , assertProperty samplePrimes
-            (\p -> divisors p == [1, p])
-            "divisors: prime not equal to [1, p]"
-    , assertProperty sampleMixed
-            (\n -> let divs = divisors n
-                   in and $ map (\d -> any (\d' -> d * d' == n) divs) divs)
-            "divisors: not every divisor has a d' to multiply with to produce n"
-    , assertProperty sampleMixed
-            (\n -> let facs = (factorize :: Integral a => a -> [(a, Integer)]) n
-                   in n == (product $ map (\(f, e) -> f ^ e) facs))
-            "factorize: product of factors not equal to original"
-    , assert (collapseMultiplicities ([1, 2, 3] :: [Integer]) == [((1 :: Integer), (1 :: Integer)), (2, 1), (3, 1)])
-            "collapseMultiplicities failed on no-op"
-    , assert (collapseMultiplicities [1, 2, 2, 3, 3, 3] == ([(1, 1), (2, 2), (3, 3)] :: [(Integer, Integer)]))
-            "collapseMultiplicities failed"
-    , assertProperty samplePrimes
-            (\p -> primes p == [p])
-            "primes: failed on prime"
-    , assertProperty sampleComposites
-            (\n -> and . map isPrime $ primes n)
-            "primes: failed on composites"
-    , assert (partitionPrimes (49 :: Integer)  3 5 == (1, []))
-            "partitionPrimes with empty set failed"
-    , assert (partitionPrimes (1155 :: Integer) 1 2 == (1155, [3, 5, 7, 11]))
-            "partitionPrimes on whole set failed"
-    , assert (partitionPrimes (1155 :: Integer) 3 4 == (231 , [3, 7, 11]))
-            "partitionPrimes failed on 1155 3 4"
-    , assertProperty samplePrimes
-            isPrime
-            "isPrime: failed on prime"
-    , assertProperty sampleComposites
-            (not . isPrime)
-            "isPrime: failed on composite"
-    , assertProperty ([5*x | x <- [1 .. 100]] :: [Integer])
-            (not . (areCoprime 5))
-            "areCoprime failed on multiples of 5"
-    , assertProperty (delete 3 samplePrimes)
-            (areCoprime 3)
-            "areCoprime failed on primes"
-    ] `using` parList rdeepseq
-
 arithmeticFnsTests :: [Either String ()]
 arithmeticFnsTests =
     [ assertProperty sampleMixed
@@ -788,7 +740,7 @@ gaussianIntTests =
 
 tests :: Either String [()]
 tests = sequence $ concat (
-    [ zTests
+    [ 
     , arithmeticFnsTests
     , gaussianIntTests
     ] `using` parList rdeepseq)
