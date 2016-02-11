@@ -23,7 +23,7 @@ sampleMixed :: [Integer]
 sampleMixed = [1..100]
 
 zModMTests :: Test
-zModMTests = TestList $
+zModMTests = TestList
     [ TestList $ [ TestCase $ assertBool
                     ("test canon bounds: " ++ (show n) ++ " mod " ++ (show m))
                     (n' >= 0 && n' < m && n `mod` m == n')
@@ -35,34 +35,31 @@ zModMTests = TestList $
     , TestCase $ assertEqual "test polyCong" ([1,4]) (polyCong 5 [4, 5, (6 :: Integer)])
     , TestCase $ assertEqual "test exponentiate" 3 (exponentiate 9 12 (6 :: Integer))
     , TestCase $ assertEqual "test exponentiate negative" 3 (exponentiate (-9) 12 (6 :: Integer))
---    , TestCase $ assertBool "test rsaGenKeys"
---                    (and [ (canon (privk * pubk) (totient n) == 1) &&
---                             n == n'
---                        | Right ((pubk, n), (privk, n')) <- rsaGenKeys 37 41
---                        ])
---    , assert (fromRight $ do
---                    let text = (77 :: Integer)
---                    keyPairs <- rsaGenKeys 19 23
---                    ciphers <- sequence $ map (\(pub, _) -> rsaEval pub text) keyPairs
---                    plains <- sequence $ zipWith (\(_, priv) cipher -> rsaEval priv cipher) keyPairs ciphers
---                    let results = zipWith (==) plains $ repeat text
---                    return $ and results
---                )
---            "rsaEval: public and private keys were not inverses!"
-    , TestList $ [ TestCase $ assertBool
+    , TestList [ TestCase $ assertBool "test rsaGenKeys (ed == 1 mod phi(n))" (canon (privk * pubk) (totient n) == 1 && n == n')
+                | let (Right keys) = rsaGenKeys 37 41
+                , ((pubk, n), (privk, n')) <- keys
+                ]
+    , TestList [ TestCase $ assertBool "test rsaGenKeys (inverses)" (plain == text)
+                | let text = 77
+                , let (Right keys) = rsaGenKeys 19 23
+                , (pub, priv) <- keys
+                , let (Right cipher) = rsaEval pub text
+                , let (Right plain) = rsaEval priv cipher
+                ]
+    , TestList [ TestCase $ assertBool
                     ("test units invertibility: " ++ (show n))
                     (and $ map (\u -> any (\u' -> canon (u * u') n == 1) us) us)
                 | n <- sampleMixed
                 , let us = units n
                 ]
-    , TestList $ [ TestCase $ assertBool
+    , TestList [ TestCase $ assertBool
                     ("test nilpotents: " ++ (show n))
                     (and $ map (\xs -> any (== 0) xs) iteratedLists)
                 | n <- sampleMixed
                 , let ns = map fromIntegral $ nilpotents n
                 , let iteratedLists = map (\x -> take (fromIntegral n) $ iterate (\l -> canon (l * x) n) x) ns
                 ]
-    , TestList $ [ TestCase $ assertBool
+    , TestList [ TestCase $ assertBool
                     ("test idempotents: " ++ (show n))
                     (and $ map (\i -> canon (i * i) n == i) is)
                 | n <- sampleMixed
@@ -76,7 +73,7 @@ zModMTests = TestList $
     ]
 
 continuedFractionTests :: Test
-continuedFractionTests = TestList $
+continuedFractionTests = TestList
     [ TestCase $ assertBool ("Test conversion to and from continued fraction: (" ++ (show m) ++ "+ sqrt(" ++ (show d) ++ "))/" ++ (show q))
        (abs ((((fromIntegral m) + ((sqrt :: Double -> Double) $ fromIntegral d)) / (fromIntegral q)) -
         (fromRational . continuedFractionToRational $ continuedFractionFromQuadratic m d q))
