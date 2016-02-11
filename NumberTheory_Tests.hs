@@ -1,5 +1,7 @@
 module Main where
 
+import Data.List
+import qualified Data.Numbers.Primes as Primes
 import NumberTheory
 import Test.HUnit
 
@@ -10,10 +12,11 @@ tests :: Test
 tests = TestList [ TestLabel "Continued Fraction Tests" continuedFractionTests
                 , TestLabel "Pythagorean Triples Tests" pythTests
                 , TestLabel "Z mod M Tests" zModMTests
+                , TestLabel "Z Tests" zTests
                 ]
 
 pythTests :: Test
-pythTests = TestList $
+pythTests = TestList
     [ TestCase $ assertEqual "test pythSide" [(35, 12, 37),(37, 684, 685)] (pythSide (37 :: Int))
     , TestCase $ assertEqual "test pythLeg" [(15, 8, 17),(15, 20, 25),(15, 36, 39),(15, 112, 113)] (pythLeg (15 :: Int))
     , TestCase $ assertEqual "test pythHyp" [(7, 24, 25),(15, 20, 25)] (pythHyp (25 :: Int))
@@ -21,6 +24,57 @@ pythTests = TestList $
 
 sampleMixed :: [Integer]
 sampleMixed = [1..100]
+samplePrimes :: [Integer]
+samplePrimes = takeWhile (<= 100) Primes.primes
+sampleComposites :: [Integer]
+sampleComposites = filter (not . flip elem samplePrimes) [1 .. 100]
+
+zTests :: Test
+zTests = TestList
+    [ TestList [ TestCase $ assertEqual "divisors divide evenly" 0 remainder
+                | n <- sampleMixed
+                , let divs = divisors n
+                , d <- divs
+                , let remainder = n `mod` d
+                ]
+    , TestList [ TestCase $ assertEqual "primes are only divisible by themselves and 1" [1, p] divs
+                | p <- samplePrimes
+                , let divs = divisors p
+                ]
+    , TestList [ TestCase $ assertBool "each divisor has a mate to produce n" found
+                | n <- sampleMixed
+                , let divs = divisors n
+                , d <- divs
+                , let found = any (\d' -> d * d' == n) divs
+                ]
+    , TestList [ TestCase $ assertEqual "product of factors from factorize is original" n prod
+                | n <- sampleMixed
+                , let facs = factorize n
+                , let prod = product $ map (\(f, e) -> f ^ e) facs
+                ]
+    , TestList [ TestCase $ assertEqual "test primes on primes" [p] ps
+                | p <- samplePrimes
+                , let ps = primes p
+                ]
+    , TestList [ TestCase $ assertBool "test primes on composites" res
+                | n <- sampleMixed
+                , let res = and . map isPrime $ primes n
+                ]
+    , TestList [ TestCase $ assertBool "test isPrime on primes" (isPrime p)
+                | p <- samplePrimes
+                ]
+    , TestList [ TestCase $ assertBool "test isPrime on composites" (not $ isPrime n)
+                | n <- sampleComposites
+                ]
+    , TestList [ TestCase $ assertBool "test areCoprime on common multiples" res
+                | x <- [1 .. 10]
+                , let res = not $ areCoprime 5 (5 * x)
+                ]
+    , TestList [ TestCase $ assertBool "test areCoprime on primes" res
+                | p <- delete 3 samplePrimes
+                , let res = areCoprime 3 p
+                ]
+    ]
 
 zModMTests :: Test
 zModMTests = TestList
@@ -39,7 +93,7 @@ zModMTests = TestList
                 | let (Right keys) = rsaGenKeys 37 41
                 , ((pubk, n), (privk, n')) <- keys
                 ]
-    , TestList [ TestCase $ assertBool "test rsaGenKeys (inverses)" (plain == text)
+    , TestList [ TestCase $ assertEqual "test rsaGenKeys (inverses)" text plain
                 | let text = 77
                 , let (Right keys) = rsaGenKeys 19 23
                 , (pub, priv) <- keys
