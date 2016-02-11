@@ -13,6 +13,7 @@ tests = TestList [ TestLabel "Continued Fraction Tests" continuedFractionTests
                 , TestLabel "Pythagorean Triples Tests" pythTests
                 , TestLabel "Z mod M Tests" zModMTests
                 , TestLabel "Z Tests" zTests
+                , TestLabel "Arithmetic Functions tests" arithmeticFnsTests
                 ]
 
 pythTests :: Test
@@ -124,6 +125,25 @@ zModMTests = TestList
     , TestCase $ assertEqual "test orders" [1, 4, 2, 4, 4, 2, 4, 2] (orders (15 :: Integer))
     , TestCase $ assertEqual "test expressAsRoots" [(-2, 1), (7, 3), (-8, 3), (13, 1)] (expressAsRoots 13 (15 :: Integer))
     , TestCase $ assertEqual "test powerCong" [2] (powerCong 11 3 (5 :: Integer))
+    ]
+
+arithmeticFnsTests :: Test
+arithmeticFnsTests = TestList
+    [ TestList [ TestCase $ assertEqual "totient counts number of coprimes <=n" c c'
+                | n <- sampleMixed
+                , let c = totient n
+                , let c' = genericLength $ filter (areCoprime n) [1 .. n]
+                ]
+    , TestCase $ assertEqual "legendre 3 5" (Right (-1)) (legendre 3 5)
+    , TestCase $ assertEqual "legendre checks prime input" (Left "p is not prime") (legendre 3 4)
+    , TestCase $ assertEqual "kronecker 6 5" (Right 1) (kronecker 6 5)
+    , TestCase $ assertEqual "tau 60" 12 (tau 60)
+    , TestCase $ assertEqual "sigma 1 60" 168 (sigma 1 60)
+    , TestCase $ assertEqual "sigma 4 60" 14013636 (sigma 4 60)
+    , TestCase $ assertEqual "mobius 9 (non-squarefree)" 0 (mobius 9)
+    , TestCase $ assertEqual "mobius 5" (-1) (mobius 5)
+    , TestCase $ assertEqual "littleOmega 60" 3 (littleOmega 60)
+    , TestCase $ assertEqual "bigOmega 60" 4 (bigOmega 60)
     ]
 
 continuedFractionTests :: Test

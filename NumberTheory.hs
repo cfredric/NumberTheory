@@ -650,34 +650,6 @@ sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 
 sampleQuadratics :: [(Integer, Integer, Integer)]
 sampleQuadratics = [ (m, d, q) | m <- [0 .. 20], d <- [0 .. 20], q <- [1 .. 20]]
 
-
-arithmeticFnsTests :: [Either String ()]
-arithmeticFnsTests =
-    [ assertProperty sampleMixed
-            (\n -> totient n == (genericLength $ filter (areCoprime n) [1 .. n]))
-            "totient: does not count number of coprimes <= n."
-    , assert (legendre (3 :: Integer) 5 == Right (-1))
-            "legendre 3 5 failed"
-    , assert (legendre (3 :: Integer) 4 == Left
-            "p is not prime") "legendre did not fail on non-prime input"
-    , assert (kronecker (6 :: Integer) 5 == Right 1)
-            "kronecker 6 5 failed"
-    , assert (tau (60 :: Integer) == 12)
-            "tau 60 failed"
-    , assert (sigma 1 60 == (168 :: Integer))
-            "sigma 1 60 failed"
-    , assert (sigma 4 60 == (14013636 :: Integer))
-            "sigma 4 60 failed"
-    , assert (mobius 9 == (0 :: Integer))
-            "mobius 9 failed (non-square free)"
-    , assert (mobius 5 == (-1 :: Integer))
-            "mobius 5 failed"
-    , assert (littleOmega 60 == (3 :: Integer))
-            "littleOmega 60 failed"
-    , assert (bigOmega 60 == (4 :: Integer))
-            "bigOmega 60 failed"
-    ] `using` parList rdeepseq
-
 gaussianIntTests :: [Either String ()]
 gaussianIntTests =
     [ assertProperty (map (\n -> n :+ 0) ([1 .. 10] :: [Integer]))
@@ -741,8 +713,7 @@ gaussianIntTests =
 tests :: Either String [()]
 tests = sequence $ concat (
     [ 
-    , arithmeticFnsTests
-    , gaussianIntTests
+    gaussianIntTests
     ] `using` parList rdeepseq)
 
 main :: IO ()
