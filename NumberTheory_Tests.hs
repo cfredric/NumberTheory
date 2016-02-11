@@ -9,12 +9,14 @@ main :: IO Counts
 main = runTestTT tests
 
 tests :: Test
-tests = TestList [ TestLabel "Continued Fraction Tests" continuedFractionTests
-                , TestLabel "Pythagorean Triples Tests" pythTests
-                , TestLabel "Z mod M Tests" zModMTests
-                , TestLabel "Z Tests" zTests
-                , TestLabel "Arithmetic Functions tests" arithmeticFnsTests
-                ]
+tests = TestList
+    [ TestLabel "Continued Fraction Tests" continuedFractionTests
+    , TestLabel "Pythagorean Triples Tests" pythTests
+    , TestLabel "Z mod M Tests" zModMTests
+    , TestLabel "Z Tests" zTests
+    , TestLabel "Arithmetic Functions tests" arithmeticFnsTests
+    , TestLabel "Gaussian Integer Tests" gaussianIntTests
+    ]
 
 pythTests :: Test
 pythTests = TestList
@@ -29,6 +31,8 @@ samplePrimes :: [Integer]
 samplePrimes = takeWhile (<= 100) Primes.primes
 sampleComposites :: [Integer]
 sampleComposites = filter (not . flip elem samplePrimes) [1 .. 100]
+sampleMixedGaussInts :: [GaussInt Integer]
+sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
 
 zTests :: Test
 zTests = TestList
@@ -144,6 +148,53 @@ arithmeticFnsTests = TestList
     , TestCase $ assertEqual "mobius 5" (-1) (mobius 5)
     , TestCase $ assertEqual "littleOmega 60" 3 (littleOmega 60)
     , TestCase $ assertEqual "bigOmega 60" 4 (bigOmega 60)
+    ]
+
+gaussianIntTests :: Test
+gaussianIntTests = TestList
+    [ TestList [ TestCase $ assertEqual "conjugate with 0i" g g'
+                | n <- sampleMixed
+                , let g = n :+ 0
+                , let g' = conjugate g
+                ]
+    , TestList [ TestCase $ assertEqual "conjugate mixed ints" (a :+ b) (a' :+ (-b'))
+                | g@(a :+ b) <- sampleMixedGaussInts
+                , let (a' :+ b') = conjugate g
+                ]
+    , TestCase $ assertEqual "gMultiply" (2 :+ 42) ((5 :+ 3) `gMultiply` (4 :+ 6))
+    , TestCase $ assertEqual "gDivide on even division" (4 :+ 6) ((2 :+ 42) `gDivide` (5 :+ 3))
+    , TestCase $ assertEqual "gDivide on uneven division" (4 :+ 6) ((2 :+ 43) `gDivide` (5 :+ 3))
+    , TestCase $ assertEqual "gDivide on negative divisor" (4 :+ 6) (((-2) :+ (-43)) `gDivide` ((-5) :+ (-3)))
+    , TestCase $ assertEqual "gMod on positive case" (0 :+ 1) ((2 :+ 43) `gMod` (5 :+ 3))
+    , TestCase $ assertEqual "gMod on negative case" (0 :+ (-1)) (((-2) :+ (-43)) `gMod` (5 :+ 3))
+    , TestCase $ assertEqual "magnitude on integer case" 25 (magnitude (5 :+ 0))
+    , TestCase $ assertEqual "magnitude on 5 :+ 3" 34 (magnitude (5 :+ 3))
+    , TestCase $ assertBool "gIsPrime on prime" (gIsPrime (2 :+ 5))
+    , TestCase $ assertBool "gIsPrime on composite" (not $ gIsPrime (3 :+ 5))
+    , TestList [ TestCase $ assertBool "gPrimes generates primes" (gIsPrime p)
+                | p <- take 100 gPrimes
+                ]
+    , TestCase $ assertEqual "gGCD on even multiple" (2 :+ 4) (gGCD (2 :+ 4) (12 :+ 24))
+    , TestCase $ assertEqual "gGCD on uneven multiple" (1 :+ 1) (gGCD (2 :+ 4) (5 :+ 3))
+    , TestCase $ assertBool "gGCD on uneven multiple (division rounding test)"
+            (gGCD ((12::Int) :+ 23) (23 :+ 34) `elem` [x :+ y | x <- [(-1)..1], y <- [(-1)..1], (abs x) + (abs y) == 1])
+    , TestCase $ assertBool "gFindPrime 5" ((head $ gFindPrime (5::Int)) `elem` [ a :+ b | a <- [2, (-2)], b <- [1, (-1)]])
+    , TestCase $ assertEqual "gFindPrime 7" [] (gFindPrime (7::Int))
+    , TestList [ TestCase $ assertEqual "gExponentiate on real ints" ((a ^ pow) :+ 0) (gExponentiate g pow)
+                | a <- sampleMixed
+                , pow <- [1 .. 5]
+                , let g = a :+ 0
+                ]
+    , TestCase $ assertEqual "gExponentiate on 1st complex int" ((-119) :+ (-120)) (gExponentiate (2 :+ 3) 4)
+    , TestCase $ assertEqual "gExponentiate on 2nd complex int" (122 :+ (-597)) (gExponentiate (2 :+ 3) 5)
+    , TestList [ TestCase $ assertEqual "gFactorize, gMultiply, gExponentiate recover original GaussInt"
+                        g prod
+                | g <- sampleMixedGaussInts
+                , let factors = gFactorize g
+                , let condensedFactors = map (\(x, e) -> gExponentiate x e) factors
+                , let prod = foldl gMultiply (1 :+ 0) condensedFactors
+                ]
+    , TestCase $ assertEqual "gFactorize on 1 :+ 1" [(1 :+ 1, 1)] (gFactorize (1 :+ 1))
     ]
 
 continuedFractionTests :: Test
