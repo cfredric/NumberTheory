@@ -1,4 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+-- |A library for doing number-theoretic computations. This includes computations
+-- in Z mod m (henceforth also written Zm), Z, Z x Zi (the Gaussian integers),
+-- and some computations with continued fractions.
 module NumberTheory (
     -- pythagorean triples
     pythSide,
