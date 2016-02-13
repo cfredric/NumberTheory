@@ -611,21 +611,24 @@ continuedFractionFromQuadratic m0 d q0
     | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (m0 * q0) (d * q0 * q0) (q0 * q0)
     | otherwise                         =
         let a0 = truncate $ (fromIntegral m0 + sqrti d) / fromIntegral q0
-        in helper [m0] [q0] [a0]
+        in helper [(m0, q0, a0)]
     where
-    helper :: [a] -> [a] -> [a] -> ContinuedFraction a
-    helper ms@(mp : _) qs@(qp : _) as@(ap : _) =
+    helper :: [(a, a, a)] -> ContinuedFraction a
+    helper ts@((mp, qp, ap) : _) =
         let mn = ap * qp - mp
             qn = (truncate :: Double -> a) $ getNextQ mn qp
             an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
-        in case elemIndex (mn, qn, an) (reverse $ zip3 ms qs as) of
+            ts' = reverse ts
+            as' = map third ts'
+        in case elemIndex (mn, qn, an) ts' of
             -- We've hit the first repetition of the period
-            Just idx -> let as' = reverse as
-                        in Infinite (take idx as', drop idx as')
+            Just idx -> Infinite (take idx as', drop idx as')
             -- Haven't hit the end of the period yet, keep going as usual
-            Nothing  -> helper (mn : ms) (qn : qs) (an : as)
+            Nothing  -> helper $ (mn, qn, an) : ts
     getNextQ :: a -> a -> Double
     getNextQ mp qp = fromIntegral (d - mp * mp) / fromIntegral qp
+    third :: (a, b, c) -> c
+    third (_, _, x) = x
 
 -- |Convert a continued fraction to a rational number. If the fraction is finite,
 -- then this is an exact conversion. If the fraction is infinite, this conversion
