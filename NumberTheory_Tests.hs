@@ -25,12 +25,13 @@ pythTests = TestList
     , TestCase $ assertEqual "test pythHyp" [(7, 24, 25),(15, 20, 25)] (pythHyp (25 :: Int))
     ]
 
+-- Note: don't use any functions from NumberTheory to define these (e.g. isPrime).
 sampleMixed :: [Integer]
-sampleMixed = [1..100]
+sampleMixed = [1 .. 100]
 samplePrimes :: [Integer]
-samplePrimes = takeWhile (<= 100) Primes.primes
+samplePrimes = takeWhile (<= last sampleMixed) Primes.primes
 sampleComposites :: [Integer]
-sampleComposites = filter (not . flip elem samplePrimes) [1 .. 100]
+sampleComposites = filter (not . flip elem samplePrimes) sampleMixed
 sampleMixedGaussInts :: [GaussInt Integer]
 sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
 
