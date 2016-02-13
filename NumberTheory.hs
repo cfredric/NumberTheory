@@ -79,7 +79,7 @@ import qualified Data.Map             as Map    (fromListWith, toList)
 import           Data.Monoid
 import qualified Data.Numbers.Primes  as Primes (primes)
 import           Data.Ratio                     ((%), denominator, numerator, Ratio)
-import qualified Data.Set             as Set    (fromList, member, Set, size, toList)
+import qualified Data.Set             as Set    (fromList, Set, size, toList)
 
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
@@ -207,7 +207,7 @@ primes = map fst . (factorize :: Integral a => a -> [(a, Integer)])
 
 -- |Compute if n is prime.
 isPrime :: Integral a => a -> Bool
-isPrime n = Set.member n . Set.fromList $ takeWhile (<= n) Primes.primes
+isPrime n = n `elem` takeWhile (<= n) (dropWhile (< n) Primes.primes)
 
 -- |Compute whether two integers are relatively prime to each other. That is, if
 -- their GCD == 1.
