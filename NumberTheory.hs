@@ -231,15 +231,18 @@ polyCong :: Integral a => a -> [a] -> [a]
 polyCong m cs = filter (\x -> evalPoly m x cs == 0) [0 .. m - 1]
 
 -- |Raise a to the power of e in Zm.
-exponentiate :: Integral a => a -> a -> a -> a
+exponentiate :: (Show a, Integral a) => a -> a -> a -> a
 exponentiate a e m
-    | e <= 0    = 1
-    | otherwise =
-        if e `mod` 2 == 0
-        then let q = exponentiate a (quot e 2) m
-            in canon (q * q) m
-        else let q = exponentiate a (e - 1) m
-            in canon (q * a) m
+    | e < 0 && a `elem` us      = exponentiate a (canon (ul + e) m) m
+    | e < 0                     = error $ show a ++ " is not invertible in Z mod " ++ show m
+    | e == 0                    = 1
+    | even e                    = canon (s * s) m
+    | otherwise                 = canon (q * a) m
+    where
+    s = exponentiate a (quot e 2) m
+    q = exponentiate a (e - 1) m
+    us = units m
+    ul = genericLength us
 
 -- |A type to represent a public or private key.
 type Key a = (a, a)
@@ -257,7 +260,7 @@ rsaGenKeys p q
               ]
 
 -- |Use the given key to encode/decode the message or ciphertext.
-rsaEval :: Integral a => Key a -> a -> Either String a
+rsaEval :: (Show a, Integral a) => Key a -> a -> Either String a
 rsaEval (k, n) text = Right $ exponentiate text k n
 
 -- |Compute the group of units of Zm.
@@ -265,7 +268,7 @@ units :: Integral a => a -> [a]
 units n = filter (areCoprime n) [1 .. n - 1]
 
 -- |Compute the nilpotent elements of Zm.
-nilpotents :: Integral a => a -> [a]
+nilpotents :: (Show a, Integral a) => a -> [a]
 nilpotents m
     | r == 0    = []
     | otherwise = [ n
@@ -279,7 +282,7 @@ idempotents :: Integral a => a -> [a]
 idempotents = flip polyCong [1, -1, 0]
 
 -- |Compute the primitive roots of Zm.
-roots :: Integral a => a -> [a]
+roots :: (Show a, Integral a) => a -> [a]
 roots m
     | null us   = []
     | otherwise = [ u | u <- us, order u m == genericLength us]
@@ -287,7 +290,7 @@ roots m
 
 -- |Compute the "almost roots" of Zm. An almost root is a unit, is not a
 -- primitive root, and generates the whole group of units when exponentiated.
-almostRoots :: forall a. Integral a => a -> [a]
+almostRoots :: forall a. (Show a, Integral a) => a -> [a]
 almostRoots m = let unitCount = genericLength $ units m
                     expList = [1 .. unitCount + 1]
                     generateUnits :: a -> Set.Set a
@@ -302,17 +305,17 @@ almostRoots m = let unitCount = genericLength $ units m
                         ]
 
 -- |Compute the order of x in Zm.
-order :: Integral a => a -> a -> a
+order :: (Show a, Integral a) => a -> a -> a
 order x m = head [ ord
                  | ord <- [1 .. genericLength $ units m]
                  , exponentiate (canon x m) ord m == 1
                  ]
 
 -- |Computes the orders of all units in Zm.
-orders :: Integral a => a -> [a]
+orders :: (Show a, Integral a) => a -> [a]
 orders m = map (`order` m) $ units m
 
-rootsOrAlmostRoots :: Integral a => a -> [a]
+rootsOrAlmostRoots :: (Show a, Integral a) => a -> [a]
 rootsOrAlmostRoots m =
     case roots m of
         [] -> almostRoots m
@@ -320,7 +323,7 @@ rootsOrAlmostRoots m =
 
 -- |Find powers of all the primitive roots of Zm that are equal to x.
 -- Equivalently, express x as powers of roots (almost or primitive) in Zm.
-expressAsRoots :: Integral a => a -> a -> [(a, a)]
+expressAsRoots :: (Show a, Integral a) => a -> a -> [(a, a)]
 expressAsRoots x m =
     let rs = rootsOrAlmostRoots m
     in  [ (r', e)
@@ -332,7 +335,7 @@ expressAsRoots x m =
         ]
 
 -- |Solve the power congruence for x, given e, k, m: x^e = k (mod m)
-powerCong :: Integral a => a -> a -> a -> [a]
+powerCong :: (Show a, Integral a) => a -> a -> a -> [a]
 powerCong e k m = [ x
                   | x <- [1 .. m]
                   , exponentiate x e m == canon k m
@@ -340,7 +343,7 @@ powerCong e k m = [ x
 
 -- |Compute the integer log base B of k in Zm.
 -- Equivalently, given 2 elements of Zm, find what powers of b produce k, if any.
-ilogBM :: Integral a => a -> a -> a -> [a]
+ilogBM :: (Show a, Integral a) => a -> a -> a -> [a]
 ilogBM b k m = let bc = canon b m
                    kc = canon k m
                in [ e
@@ -349,7 +352,7 @@ ilogBM b k m = let bc = canon b m
                   ]
 
 -- |Compute the Legendre symbol of p and q.
-legendre :: Integral a => a -> a -> Either String a
+legendre :: (Show a, Integral a) => a -> a -> Either String a
 legendre q p
     | not $ isPrime p = Left "p is not prime"
     -- special case p = 2: not defined by Legendre, but makes it possible to call from kronecker.
@@ -362,7 +365,7 @@ legendre q p
                    in Right $ if r > 1 then (-1) else r
 
 -- |Compute the Kronecker symbol (q|m).
-kronecker :: Integral a => a -> a -> Either String a
+kronecker :: (Show a, Integral a) => a -> a -> Either String a
 kronecker q m = fmap product $ sequence [ fmap (^ e) (legendre q p)
                                         | (p, e) <- (factorize :: Integral a => a -> [(a, Integer)]) m
                                         ]
@@ -478,7 +481,7 @@ gGCD g h
     | otherwise = gGCD h (g `gMod` h)
 
 -- |Find a Gaussian integer whose magnitude squared is the given prime number.
-gFindPrime :: Integral a => a -> [GaussInt a]
+gFindPrime :: (Show a, Integral a) => a -> [GaussInt a]
 gFindPrime 2 = [1 :+ 1]
 gFindPrime p
     | p `mod` 4 == 1 && isPrime p =
@@ -497,7 +500,7 @@ gExponentiate a e
                         in a `gMultiply` m
 
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
-gFactorize :: forall a. Integral a => GaussInt a -> [(GaussInt a, a)]
+gFactorize :: forall a. (Show a, Integral a) => GaussInt a -> [(GaussInt a, a)]
 gFactorize g
     | g == 0 :+ 0   = []
     | g == 1 :+ 0   = [(1 :+ 0, 1)]

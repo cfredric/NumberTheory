@@ -94,6 +94,15 @@ zModMTests = TestList
     , TestCase $ assertEqual "test polyCong" [1, 4] (polyCong 5 [4, 5, 6 :: Integer])
     , TestCase $ assertEqual "test exponentiate" 3 (exponentiate 9 12 (6 :: Integer))
     , TestCase $ assertEqual "test exponentiate negative" 3 (exponentiate (-9) 12 (6 :: Integer))
+    , TestList [ TestCase $ assertEqual ("test inverses with exponentiation (" ++ show x ++ "^" ++ show e ++ " mod " ++ show n ++ ")") 1 p
+                | n <- sampleMixed
+                , let us = units n
+                , u <- us
+                , e <- [1 .. genericLength us]
+                , let x = exponentiate u e n
+                , let y = exponentiate u (-e) n
+                , let p = canon (x * y) n
+                ]
     , TestList [ TestCase $ assertBool "test rsaGenKeys (ed == 1 mod phi(n))" (canon (privk * pubk) (totient n) == (1 :: Integer) && n == n')
                 | let (Right keys) = rsaGenKeys 37 41
                 , ((pubk, n), (privk, n')) <- keys
