@@ -233,11 +233,11 @@ polyCong m cs = filter (\x -> evalPoly m x cs == 0) [0 .. m - 1]
 -- |Raise a to the power of e in Zm.
 exponentiate :: (Show a, Integral a) => a -> a -> a -> a
 exponentiate a e m
-    | e < 0 && a `elem` us      = exponentiate a (canon (ul + e) m) m
-    | e < 0                     = error $ show a ++ " is not invertible in Z mod " ++ show m
-    | e == 0                    = 1
-    | even e                    = canon (s * s) m
-    | otherwise                 = canon (q * a) m
+    | e < 0 && a `elem` us = exponentiate a (canon (ul + e) m) m
+    | e < 0                = error $ show a ++ " is not invertible in Z mod " ++ show m
+    | e == 0               = 1
+    | even e               = canon (s * s) m
+    | otherwise            = canon (q * a) m
     where
     s = exponentiate a (quot e 2) m
     q = exponentiate a (e - 1) m
