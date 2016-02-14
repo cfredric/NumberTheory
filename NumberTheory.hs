@@ -504,15 +504,12 @@ gExponentiate a e
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
 gFactorize :: forall a. (Show a, Integral a) => GaussInt a -> [(GaussInt a, a)]
 gFactorize g
-    | g == 0 :+ 0   = []
-    | g == 1 :+ 0   = [(1 :+ 0, 1)]
+    | g == 0 :+ 0   = [(0 :+ 0, 1)]
     | otherwise     =
     let nonUnits       = concatMap processPrime . factorize $ magnitude g
         nonUnitProduct = foldr ((.*) . uncurry gExponentiate) (1 :+ 0) nonUnits
-        remainderUnit  = case g ./ nonUnitProduct of
-                            1 :+ 0 -> []
-                            g'     -> [(g', 1)]
-    in remainderUnit ++ nonUnits
+        remainderUnit  = (g ./ nonUnitProduct, 1)
+    in remainderUnit : nonUnits
     where
     processPrime :: (a, a) -> [(GaussInt a, a)]
     processPrime (p, e)

@@ -19,7 +19,7 @@ tests = TestList
     ]
 
 limit :: [a] -> [a]
-limit = take 100
+limit = take 20000
 --limit = id
 
 pythTests :: Test
@@ -37,7 +37,7 @@ samplePrimes = takeWhile (<= last sampleMixed) Primes.primes
 sampleComposites :: [Integer]
 sampleComposites = filter (not . flip elem samplePrimes) sampleMixed
 sampleMixedGaussInts :: [GaussInt Integer]
-sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
+sampleMixedGaussInts = [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
 
 zTests :: Test
 zTests = TestList
@@ -212,7 +212,6 @@ gaussianIntTests = TestList
                 , let condensedFactors = map (uncurry gExponentiate) factors
                 , let prod = foldl (.*) (1 :+ 0) condensedFactors
                 ]
-    , TestCase $ assertEqual "gFactorize on 1 :+ 1" [((1 :: Integer) :+ 1, 1)] (gFactorize (1 :+ 1))
     ]
 
 continuedFractionTests :: Test
