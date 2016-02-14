@@ -256,20 +256,20 @@ exponentiate a e m
 type Key a = (a, a)
 -- |Given primes p and q, generate all pairs of public/private keys derived
 -- from those values.
-rsaGenKeys :: Integral a => a -> a -> Either String [(Key a, Key a)]
+rsaGenKeys :: Integral a => a -> a -> [(Key a, Key a)]
 rsaGenKeys p q
-    | not (isPrime p && isPrime q) = Left "p and q must both be prime"
+    | not (isPrime p && isPrime q) = error "p and q must both be prime"
     | otherwise                    =
-        Right [ ((e, n), (d, n))
-              | let n = p * q
-                    phi = totient n
-              , e <- filter (areCoprime phi) [2 .. phi - 1]
-              , d <- polyCong phi [e, -1]
-              ]
+        [ ((e, n), (d, n))
+        | let n = p * q
+              phi = totient n
+        , e <- filter (areCoprime phi) [2 .. phi - 1]
+        , d <- polyCong phi [e, -1]
+        ]
 
 -- |Use the given key to encode/decode the message or ciphertext.
-rsaEval :: (Integral a) => Key a -> a -> Either String a
-rsaEval (k, n) text = Right $ exponentiate text k n
+rsaEval :: (Integral a) => Key a -> a -> a
+rsaEval (k, n) text = exponentiate text k n
 
 -- |Compute the group of units of Zm.
 units :: Integral a => a -> [a]

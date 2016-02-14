@@ -111,17 +111,17 @@ zModMTests = TestList
     , TestList $ limit [ TestCase $ assertBool "test rsaGenKeys (ed == 1 mod phi(n))" (canon (privk * pubk) (totient n) == (1 :: Integer) && n == n')
                 | p <- samplePrimes
                 , q <- delete p samplePrimes
-                , let (Right keys) = rsaGenKeys p q
+                , let keys = rsaGenKeys p q
                 , ((pubk, n), (privk, n')) <- keys
                 ]
     , TestList $ limit [ TestCase $ assertEqual "test rsaGenKeys (inverses)" text plain
                 | text <- sampleMixed
                 , p <- samplePrimes
                 , q <- delete p samplePrimes
-                , let (Right keys) = rsaGenKeys p q
+                , let keys = rsaGenKeys p q
                 , (pub, priv) <- keys
-                , let (Right cipher) = rsaEval pub text
-                , let (Right plain) = rsaEval priv cipher
+                , let cipher = rsaEval pub text
+                , let plain = rsaEval priv cipher
                 ]
     , TestList $ limit [ TestCase $ assertBool
                     ("test units invertibility: " ++ show n)
