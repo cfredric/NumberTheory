@@ -491,13 +491,15 @@ gFindPrime p
     | otherwise = []
 
 -- |Raise a Gaussian integer to a given power.
-gExponentiate :: (Num a, Integral b) => GaussInt a -> b -> GaussInt a
+gExponentiate :: (Num a, Integral b, Show b) => GaussInt a -> b -> GaussInt a
 gExponentiate a e
-    | e <= 0         = 1 :+ 0
-    | e `mod` 2 == 0 = let m = gExponentiate a (quot e 2)
-                        in m `gMultiply` m
-    | otherwise      = let m = gExponentiate a (e - 1)
-                        in a `gMultiply` m
+    | e < 0     = error $ "Cannot exponentiate Gaussian Int to " ++ show e
+    | e == 0    = 1 :+ 0
+    | even e    = s `gMultiply` s
+    | otherwise = a `gMultiply` m
+    where
+    s = gExponentiate a (quot e 2)
+    m = gExponentiate a (e - 1)
 
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
 gFactorize :: forall a. (Show a, Integral a) => GaussInt a -> [(GaussInt a, a)]
