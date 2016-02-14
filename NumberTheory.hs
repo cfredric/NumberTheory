@@ -47,11 +47,11 @@ module NumberTheory (
     imag,
     conjugate,
     magnitude,
-    gPlus,
-    gMinus,
-    gMultiply,
-    gDivide,
-    gMod,
+    (.+),
+    (.-),
+    (.*),
+    (./),
+    (.%),
     gIsPrime,
     gPrimes,
     gGCD,
@@ -426,16 +426,16 @@ magnitude :: Num a => GaussInt a -> a
 magnitude (x :+ y) = x * x + y * y
 
 -- |Add two Gaussian integers together.
-gPlus :: Num a => GaussInt a -> GaussInt a -> GaussInt a
-gPlus (gr :+ gi) (hr :+ hi) = (gr + hr) :+ (gi + hi)
+(.+) :: Num a => GaussInt a -> GaussInt a -> GaussInt a
+(gr :+ gi) .+ (hr :+ hi) = (gr + hr) :+ (gi + hi)
 
 -- |Subtract one Gaussian integer from another.
-gMinus :: Num a => GaussInt a -> GaussInt a -> GaussInt a
-gMinus (gr :+ gi) (hr :+ hi) = (gr - hr) :+ (gi - hi)
+(.-) :: Num a => GaussInt a -> GaussInt a -> GaussInt a
+(gr :+ gi) .- (hr :+ hi) = (gr - hr) :+ (gi - hi)
 
 -- |Multiply two Gaussian integers.
-gMultiply :: Num a => GaussInt a -> GaussInt a -> GaussInt a
-gMultiply (gr :+ gi) (hr :+ hi) = (gr * hr - hi * gi) :+ (gr * hi + gi * hr)
+(.*) :: Num a => GaussInt a -> GaussInt a -> GaussInt a
+(gr :+ gi) .* (hr :+ hi) = (gr * hr - hi * gi) :+ (gr * hi + gi * hr)
 
 -- "div" truncates toward -infinity, "quot" truncates toward 0, but we need
 -- something that truncates toward the nearest integer. I.e., we want to
@@ -444,18 +444,18 @@ divToNearest :: (Integral a, Integral b) => a -> a -> b
 divToNearest x y = round ((x % 1) / (y % 1))
 
 -- |Divide one Gaussian integer by another.
-gDivide :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
-gDivide g h =
-    let nr :+ ni = g `gMultiply` conjugate h
+(./) :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
+g ./ h =
+    let nr :+ ni = g .* conjugate h
         denom    = magnitude h
     in divToNearest nr denom :+ divToNearest ni denom
 
 -- |Compute the remainder when dividing one Gaussian integer by another.
-gMod :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
-gMod g m =
-    let q = g `gDivide` m
-        p = m `gMultiply` q
-    in g `gMinus` p
+(.%) :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
+g .% m =
+    let q = g ./ m
+        p = m .* q
+    in g .- p
 
 -- |Compute whether a given Gaussian integer is prime.
 gIsPrime :: Integral a => GaussInt a -> Bool
@@ -478,7 +478,7 @@ gPrimes = [ a' :+ b'
 gGCD :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
 gGCD g h
     | h == 0 :+ 0 = g --done recursing
-    | otherwise = gGCD h (g `gMod` h)
+    | otherwise = gGCD h (g .% h)
 
 -- |Find a Gaussian integer whose magnitude squared is the given prime number.
 gFindPrime :: (Show a, Integral a) => a -> [GaussInt a]
@@ -495,8 +495,8 @@ gExponentiate :: (Num a, Integral b, Show b) => GaussInt a -> b -> GaussInt a
 gExponentiate a e
     | e < 0     = error $ "Cannot exponentiate Gaussian Int to " ++ show e
     | e == 0    = 1 :+ 0
-    | even e    = s `gMultiply` s
-    | otherwise = a `gMultiply` m
+    | even e    = s .* s
+    | otherwise = a .* m
     where
     s = gExponentiate a (quot e 2)
     m = gExponentiate a (e - 1)
@@ -508,8 +508,8 @@ gFactorize g
     | g == 1 :+ 0   = [(1 :+ 0, 1)]
     | otherwise     =
     let nonUnits       = concatMap processPrime . factorize $ magnitude g
-        nonUnitProduct = foldr (gMultiply . uncurry gExponentiate) (1 :+ 0) nonUnits
-        remainderUnit  = case g `gDivide` nonUnitProduct of
+        nonUnitProduct = foldr ((.*) . uncurry gExponentiate) (1 :+ 0) nonUnits
+        remainderUnit  = case g ./ nonUnitProduct of
                             1 :+ 0 -> []
                             g'     -> [(g', 1)]
     in remainderUnit ++ nonUnits
@@ -524,10 +524,10 @@ gFactorize g
         processGaussPrime :: GaussInt a -> [GaussInt a] -> [GaussInt a]
         processGaussPrime g' acc = do
             gp <- gFindPrime p -- find a GaussInt whose magnitude is p
-            let fs = filter (\f -> g' `gMod` f == 0 :+ 0) [gp, conjugate gp] --find the list of even divisors
+            let fs = filter (\f -> g' .% f == 0 :+ 0) [gp, conjugate gp] --find the list of even divisors
             case fs of
                 [] -> acc                                                 -- Couldn't find a factor, so stop recursing
-                f : _ -> processGaussPrime (g' `gDivide` f) (f : acc)    -- add this factor to the list, and keep looking
+                f : _ -> processGaussPrime (g' ./ f) (f : acc)    -- add this factor to the list, and keep looking
 
 ---------------------------------------------------------------------------------
 --Combinatorics and other fun things

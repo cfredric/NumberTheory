@@ -179,12 +179,12 @@ gaussianIntTests = TestList
                 | g@(a :+ b) <- sampleMixedGaussInts
                 , let (a' :+ b') = conjugate g
                 ]
-    , TestCase $ assertEqual "gMultiply" ((2 :: Integer) :+ 42) ((5 :+ 3) `gMultiply` (4 :+ 6))
-    , TestCase $ assertEqual "gDivide on even division" ((4 :: Integer) :+ 6) ((2 :+ 42) `gDivide` (5 :+ 3))
-    , TestCase $ assertEqual "gDivide on uneven division" ((4 :: Integer) :+ 6) ((2 :+ 43) `gDivide` (5 :+ 3))
-    , TestCase $ assertEqual "gDivide on negative divisor" ((4 :: Integer) :+ 6) (((-2) :+ (-43)) `gDivide` ((-5) :+ (-3)))
-    , TestCase $ assertEqual "gMod on positive case" ((0 :: Integer) :+ 1) ((2 :+ 43) `gMod` (5 :+ 3))
-    , TestCase $ assertEqual "gMod on negative case" ((0 :: Integer) :+ (-1)) (((-2) :+ (-43)) `gMod` (5 :+ 3))
+    , TestCase $ assertEqual "Gaussian int multiplication" ((2 :: Integer) :+ 42) ((5 :+ 3) .* (4 :+ 6))
+    , TestCase $ assertEqual "Gaussian div on even division" ((4 :: Integer) :+ 6) ((2 :+ 42) ./ (5 :+ 3))
+    , TestCase $ assertEqual "Gaussian div on uneven division" ((4 :: Integer) :+ 6) ((2 :+ 43) ./ (5 :+ 3))
+    , TestCase $ assertEqual "Gaussian div on negative divisor" ((4 :: Integer) :+ 6) (((-2) :+ (-43)) ./ ((-5) :+ (-3)))
+    , TestCase $ assertEqual "Gaussian mod on positive case" ((0 :: Integer) :+ 1) ((2 :+ 43) .% (5 :+ 3))
+    , TestCase $ assertEqual "Gaussian mod on negative case" ((0 :: Integer) :+ (-1)) (((-2) :+ (-43)) .% (5 :+ 3))
     , TestCase $ assertEqual "magnitude on integer case" (25 :: Integer) (magnitude (5 :+ 0))
     , TestCase $ assertEqual "magnitude on 5 :+ 3" (34 :: Integer) (magnitude (5 :+ 3))
     , TestCase $ assertBool "gIsPrime on prime" (gIsPrime ((2 :: Integer) :+ 5))
@@ -210,7 +210,7 @@ gaussianIntTests = TestList
                 | g <- sampleMixedGaussInts
                 , let factors = gFactorize g
                 , let condensedFactors = map (uncurry gExponentiate) factors
-                , let prod = foldl gMultiply (1 :+ 0) condensedFactors
+                , let prod = foldl (.*) (1 :+ 0) condensedFactors
                 ]
     , TestCase $ assertEqual "gFactorize on 1 :+ 1" [((1 :: Integer) :+ 1, 1)] (gFactorize (1 :+ 1))
     ]
