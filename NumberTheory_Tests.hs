@@ -156,9 +156,8 @@ arithmeticFnsTests = TestList
                 , let c = totient n
                 , let c' = genericLength $ filter (areCoprime n) [1 .. n]
                 ]
-    , TestCase $ assertEqual "legendre 3 5" (Right (-1 :: Integer)) (legendre 3 5)
-    , TestCase $ assertEqual "legendre checks prime input" (Left "p is not prime") (legendre 3 (4 :: Integer))
-    , TestCase $ assertEqual "kronecker 6 5" (Right (1 :: Integer)) (kronecker 6 5)
+    , TestCase $ assertEqual "legendre 3 5" (-1 :: Integer) (legendre 3 5)
+    , TestCase $ assertEqual "kronecker 6 5" (1 :: Integer) (kronecker 6 5)
     , TestCase $ assertEqual "tau 60" (12 :: Integer) (tau 60)
     , TestCase $ assertEqual "sigma 1 60" (168 :: Integer) (sigma 1 60)
     , TestCase $ assertEqual "sigma 4 60" (14013636 :: Integer) (sigma 4 60)

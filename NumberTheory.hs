@@ -29,6 +29,7 @@ module NumberTheory (
     -- functions in Z
     divisors,
     factorize,
+    nonUnitFactorize,
     primes,
     isPrime,
     areCoprime,
@@ -174,10 +175,16 @@ divisors n
                   in sort . ([1, n] ++) $ concat divisorPairs
 
 -- |List the prime factors of n, and their multiplicities.
-factorize :: (Integral a, Num b) => a -> [(a, b)]
+factorize :: (Integral a) => a -> [(a, a)]
 factorize n
     | n == 0    = []
-    | n < 0     = (-1, 1) : factorize (-n)
+    | n < 0     = (-1, 1) : nonUnitFactorize (-n)
+    | otherwise = (1, 1) : nonUnitFactorize n
+
+nonUnitFactorize :: (Integral a) => a -> [(a, a)]
+nonUnitFactorize n
+    | n == 0    = []
+    | n < 0     = nonUnitFactorize (-n)
     | otherwise = let findFactors :: Integral a => a -> [a] -> [a]
                       findFactors 1 acc = sort acc
                       findFactors k acc =
@@ -203,7 +210,8 @@ totient n
 
 -- |List the unique prime factors of n.
 primes :: Integral a => a -> [a]
-primes = map fst . (factorize :: Integral a => a -> [(a, Integer)])
+primes = map fst . nonUnitFactorize
+
 
 -- |Compute if n is prime.
 isPrime :: Integral a => a -> Bool
@@ -231,10 +239,10 @@ polyCong :: Integral a => a -> [a] -> [a]
 polyCong m cs = filter (\x -> evalPoly m x cs == 0) [0 .. m - 1]
 
 -- |Raise a to the power of e in Zm.
-exponentiate :: (Show a, Integral a) => a -> a -> a -> a
+exponentiate :: (Integral a) => a -> a -> a -> a
 exponentiate a e m
     | e < 0 && a `elem` us = exponentiate a (canon (ul + e) m) m
-    | e < 0                = error $ show a ++ " is not invertible in Z mod " ++ show m
+    | e < 0                = error "a is not invertible in Z mod m"
     | e == 0               = 1
     | even e               = canon (s * s) m
     | otherwise            = canon (q * a) m
@@ -260,7 +268,7 @@ rsaGenKeys p q
               ]
 
 -- |Use the given key to encode/decode the message or ciphertext.
-rsaEval :: (Show a, Integral a) => Key a -> a -> Either String a
+rsaEval :: (Integral a) => Key a -> a -> Either String a
 rsaEval (k, n) text = Right $ exponentiate text k n
 
 -- |Compute the group of units of Zm.
@@ -268,7 +276,7 @@ units :: Integral a => a -> [a]
 units n = filter (areCoprime n) [1 .. n - 1]
 
 -- |Compute the nilpotent elements of Zm.
-nilpotents :: (Show a, Integral a) => a -> [a]
+nilpotents :: (Integral a) => a -> [a]
 nilpotents m
     | r == 0    = []
     | otherwise = [ n
@@ -282,7 +290,7 @@ idempotents :: Integral a => a -> [a]
 idempotents = flip polyCong [1, -1, 0]
 
 -- |Compute the primitive roots of Zm.
-roots :: (Show a, Integral a) => a -> [a]
+roots :: (Integral a) => a -> [a]
 roots m
     | null us   = []
     | otherwise = [ u | u <- us, order u m == genericLength us]
@@ -290,7 +298,7 @@ roots m
 
 -- |Compute the "almost roots" of Zm. An almost root is a unit, is not a
 -- primitive root, and generates the whole group of units when exponentiated.
-almostRoots :: forall a. (Show a, Integral a) => a -> [a]
+almostRoots :: forall a. (Integral a) => a -> [a]
 almostRoots m = let unitCount = genericLength $ units m
                     expList = [1 .. unitCount + 1]
                     generateUnits :: a -> Set.Set a
@@ -305,17 +313,17 @@ almostRoots m = let unitCount = genericLength $ units m
                         ]
 
 -- |Compute the order of x in Zm.
-order :: (Show a, Integral a) => a -> a -> a
+order :: (Integral a) => a -> a -> a
 order x m = head [ ord
                  | ord <- [1 .. genericLength $ units m]
                  , exponentiate (canon x m) ord m == 1
                  ]
 
 -- |Computes the orders of all units in Zm.
-orders :: (Show a, Integral a) => a -> [a]
+orders :: (Integral a) => a -> [a]
 orders m = map (`order` m) $ units m
 
-rootsOrAlmostRoots :: (Show a, Integral a) => a -> [a]
+rootsOrAlmostRoots :: (Integral a) => a -> [a]
 rootsOrAlmostRoots m =
     case roots m of
         [] -> almostRoots m
@@ -323,7 +331,7 @@ rootsOrAlmostRoots m =
 
 -- |Find powers of all the primitive roots of Zm that are equal to x.
 -- Equivalently, express x as powers of roots (almost or primitive) in Zm.
-expressAsRoots :: (Show a, Integral a) => a -> a -> [(a, a)]
+expressAsRoots :: (Integral a) => a -> a -> [(a, a)]
 expressAsRoots x m =
     let rs = rootsOrAlmostRoots m
     in  [ (r', e)
@@ -335,7 +343,7 @@ expressAsRoots x m =
         ]
 
 -- |Solve the power congruence for x, given e, k, m: x^e = k (mod m)
-powerCong :: (Show a, Integral a) => a -> a -> a -> [a]
+powerCong :: (Integral a) => a -> a -> a -> [a]
 powerCong e k m = [ x
                   | x <- [1 .. m]
                   , exponentiate x e m == canon k m
@@ -343,7 +351,7 @@ powerCong e k m = [ x
 
 -- |Compute the integer log base B of k in Zm.
 -- Equivalently, given 2 elements of Zm, find what powers of b produce k, if any.
-ilogBM :: (Show a, Integral a) => a -> a -> a -> [a]
+ilogBM :: (Integral a) => a -> a -> a -> [a]
 ilogBM b k m = let bc = canon b m
                    kc = canon k m
                in [ e
@@ -352,23 +360,31 @@ ilogBM b k m = let bc = canon b m
                   ]
 
 -- |Compute the Legendre symbol of p and q.
-legendre :: (Show a, Integral a) => a -> a -> Either String a
+legendre :: (Integral a) => a -> a -> a
 legendre q p
-    | not $ isPrime p = Left "p is not prime"
-    -- special case p = 2: not defined by Legendre, but makes it possible to call from kronecker.
-    | p == 2 = let qc = canon q 8
-                in Right $
-                    if even qc
-                    then 0
-                    else (if abs (4 - qc) == 1 then (-1) else 1)
+    | not $ isPrime p = error "p is not prime"
+    | p == 2          = error "p must be odd"
     | otherwise = let r = exponentiate q (quot (p - 1) 2) p
-                   in Right $ if r > 1 then (-1) else r
+                   in if r > 1 then (-1) else r
 
--- |Compute the Kronecker symbol (q|m).
-kronecker :: (Show a, Integral a) => a -> a -> Either String a
-kronecker q m = fmap product $ sequence [ fmap (^ e) (legendre q p)
-                                        | (p, e) <- (factorize :: Integral a => a -> [(a, Integer)]) m
-                                        ]
+-- |Compute the Kronecker symbol (a|n).
+kronecker :: (Integral a) => a -> a -> a
+kronecker a (-1)
+    | a < 0                = -1
+    | otherwise            = 1
+kronecker a 0
+    | abs a == 1           = 1
+    | otherwise            = 0
+kronecker _ 1              = 1
+kronecker a 2
+    | even a               = 0
+    | abs (a `mod` 8) == 1 = 1
+    | otherwise            = -1
+kronecker a n
+    | isPrime n = legendre a n
+    | otherwise = let u = if a < 0 then -1 else 1
+                  in kronecker a u * product [ kronecker a p ^ e | (p, e) <- nonUnitFactorize n]
+
 
 -- |Compute tau(n), the number of divisors of n.
 tau :: Integral a => a -> a
@@ -385,15 +401,15 @@ mobius n
     | otherwise      = 0
     where
     isSquareFree :: Integral a => a -> Bool
-    isSquareFree = all (odd . snd) . (factorize :: Integral a => a -> [(a, Integer)])
+    isSquareFree = all (odd . snd) . nonUnitFactorize
 
 -- |Compute littleOmega(n), the number of unique prime factors.
 littleOmega :: Integral a => a -> a
-littleOmega = genericLength . (factorize :: Integral a => a -> [(a, Integer)])
+littleOmega = genericLength . nonUnitFactorize
 
 -- |Compute bigOmega(n), the number of prime factors of n (including multiplicities).
 bigOmega :: Integral a => a -> a
-bigOmega = sum . map snd . factorize
+bigOmega = sum . map snd . nonUnitFactorize
 
 ---------------------------------------------------------------------------------
 infix 6 :+
@@ -481,7 +497,7 @@ gGCD g h
     | otherwise = gGCD h (g .% h)
 
 -- |Find a Gaussian integer whose magnitude squared is the given prime number.
-gFindPrime :: (Show a, Integral a) => a -> [GaussInt a]
+gFindPrime :: (Integral a) => a -> [GaussInt a]
 gFindPrime 2 = [1 :+ 1]
 gFindPrime p
     | p `mod` 4 == 1 && isPrime p =
@@ -491,9 +507,9 @@ gFindPrime p
     | otherwise = []
 
 -- |Raise a Gaussian integer to a given power.
-gExponentiate :: (Num a, Integral b, Show b) => GaussInt a -> b -> GaussInt a
+gExponentiate :: (Integral a) => GaussInt a -> a -> GaussInt a
 gExponentiate a e
-    | e < 0     = error $ "Cannot exponentiate Gaussian Int to " ++ show e
+    | e < 0     = error "Cannot exponentiate Gaussian Int to negative power"
     | e == 0    = 1 :+ 0
     | even e    = s .* s
     | otherwise = a .* m
@@ -502,11 +518,11 @@ gExponentiate a e
     m = gExponentiate a (e - 1)
 
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
-gFactorize :: forall a. (Show a, Integral a) => GaussInt a -> [(GaussInt a, a)]
+gFactorize :: forall a. (Integral a) => GaussInt a -> [(GaussInt a, a)]
 gFactorize g
     | g == 0 :+ 0   = [(0 :+ 0, 1)]
     | otherwise     =
-    let nonUnits       = concatMap processPrime . factorize $ magnitude g
+    let nonUnits       = concatMap processPrime . nonUnitFactorize $ magnitude g
         nonUnitProduct = foldr ((.*) . uncurry gExponentiate) (1 :+ 0) nonUnits
         remainderUnit  = (g ./ nonUnitProduct, 1)
     in remainderUnit : nonUnits
