@@ -18,6 +18,10 @@ tests = TestList
     , TestLabel "Gaussian Integer Tests" gaussianIntTests
     ]
 
+limit :: [a] -> [a]
+limit = take 100
+--limit = id
+
 pythTests :: Test
 pythTests = TestList
     [ TestCase $ assertEqual "test pythSide" [(35, 12, 37),(37, 684, 685)] (pythSide (37 :: Int))
@@ -37,46 +41,46 @@ sampleMixedGaussInts = delete (0 :+ 0) [a :+ b | a <- [-25 .. 25], b <- [-25 .. 
 
 zTests :: Test
 zTests = TestList
-    [ TestList [ TestCase $ assertEqual "divisors divide evenly" 0 remainder
+    [ TestList $ limit [ TestCase $ assertEqual "divisors divide evenly" 0 remainder
                 | n <- sampleMixed
                 , let divs = divisors n
                 , d <- divs
                 , let remainder = n `mod` d
                 ]
-    , TestList [ TestCase $ assertEqual "primes are only divisible by themselves and 1" [1, p] divs
+    , TestList $ limit [ TestCase $ assertEqual "primes are only divisible by themselves and 1" [1, p] divs
                 | p <- samplePrimes
                 , let divs = divisors p
                 ]
-    , TestList [ TestCase $ assertBool "each divisor has a mate to produce n" found
+    , TestList $ limit [ TestCase $ assertBool "each divisor has a mate to produce n" found
                 | n <- sampleMixed
                 , let divs = divisors n
                 , d <- divs
                 , let found = any (\d' -> d * d' == n) divs
                 ]
-    , TestList [ TestCase $ assertEqual "product of factors from factorize is original" n prod
+    , TestList $ limit [ TestCase $ assertEqual "product of factors from factorize is original" n prod
                 | n <- sampleMixed
                 , let facs = (factorize :: Integer -> [(Integer, Integer)]) n
                 , let prod = product $ map (uncurry (^)) facs
                 ]
-    , TestList [ TestCase $ assertEqual "test primes on primes" [p] ps
+    , TestList $ limit [ TestCase $ assertEqual "test primes on primes" [p] ps
                 | p <- samplePrimes
                 , let ps = primes p
                 ]
-    , TestList [ TestCase $ assertBool "test primes on composites" res
+    , TestList $ limit [ TestCase $ assertBool "test primes on composites" res
                 | n <- sampleMixed
                 , let res = all isPrime $ primes n
                 ]
-    , TestList [ TestCase $ assertBool "test isPrime on primes" (isPrime p)
+    , TestList $ limit [ TestCase $ assertBool "test isPrime on primes" (isPrime p)
                 | p <- samplePrimes
                 ]
-    , TestList [ TestCase $ assertBool "test isPrime on composites" (not $ isPrime n)
+    , TestList $ limit [ TestCase $ assertBool "test isPrime on composites" (not $ isPrime n)
                 | n <- sampleComposites
                 ]
-    , TestList [ TestCase $ assertBool "test areCoprime on common multiples" res
+    , TestList $ limit [ TestCase $ assertBool "test areCoprime on common multiples" res
                 | x <- [1 .. 10] :: [Integer]
                 , let res = not $ areCoprime 5 (5 * x)
                 ]
-    , TestList [ TestCase $ assertBool "test areCoprime on primes" res
+    , TestList $ limit [ TestCase $ assertBool "test areCoprime on primes" res
                 | p <- delete 3 samplePrimes
                 , let res = areCoprime 3 p
                 ]
@@ -84,10 +88,10 @@ zTests = TestList
 
 zModMTests :: Test
 zModMTests = TestList
-    [ TestList [ TestCase $ assertBool
+    [ TestList $ limit [ TestCase $ assertBool
                     ("test canon bounds: " ++ show n ++ " mod " ++ show m)
                     (n' >= 0 && n' < m && n `mod` m == n')
-                    | let m = 37
+                    | m <- sampleMixed
                     , n <- sampleMixed ++ map negate sampleMixed
                     , let n' = canon n m
                 ]
@@ -95,7 +99,7 @@ zModMTests = TestList
     , TestCase $ assertEqual "test polyCong" [1, 4] (polyCong 5 [4, 5, 6 :: Integer])
     , TestCase $ assertEqual "test exponentiate" 3 (exponentiate 9 12 (6 :: Integer))
     , TestCase $ assertEqual "test exponentiate negative" 3 (exponentiate (-9) 12 (6 :: Integer))
-    , TestList [ TestCase $ assertEqual ("test inverses with exponentiation (" ++ show x ++ "^" ++ show e ++ " mod " ++ show n ++ ")") 1 p
+    , TestList $ limit [ TestCase $ assertEqual ("test inverses with exponentiation (" ++ show x ++ "^" ++ show e ++ " mod " ++ show n ++ ")") 1 p
                 | n <- sampleMixed
                 , let us = units n
                 , u <- us
@@ -104,31 +108,35 @@ zModMTests = TestList
                 , let y = exponentiate u (-e) n
                 , let p = canon (x * y) n
                 ]
-    , TestList [ TestCase $ assertBool "test rsaGenKeys (ed == 1 mod phi(n))" (canon (privk * pubk) (totient n) == (1 :: Integer) && n == n')
-                | let (Right keys) = rsaGenKeys 37 41
+    , TestList $ limit [ TestCase $ assertBool "test rsaGenKeys (ed == 1 mod phi(n))" (canon (privk * pubk) (totient n) == (1 :: Integer) && n == n')
+                | p <- samplePrimes
+                , q <- delete p samplePrimes
+                , let (Right keys) = rsaGenKeys p q
                 , ((pubk, n), (privk, n')) <- keys
                 ]
-    , TestList [ TestCase $ assertEqual "test rsaGenKeys (inverses)" text plain
-                | let text = 77 :: Integer
-                , let (Right keys) = rsaGenKeys 19 23
+    , TestList $ limit [ TestCase $ assertEqual "test rsaGenKeys (inverses)" text plain
+                | text <- sampleMixed
+                , p <- samplePrimes
+                , q <- delete p samplePrimes
+                , let (Right keys) = rsaGenKeys p q
                 , (pub, priv) <- keys
                 , let (Right cipher) = rsaEval pub text
                 , let (Right plain) = rsaEval priv cipher
                 ]
-    , TestList [ TestCase $ assertBool
+    , TestList $ limit [ TestCase $ assertBool
                     ("test units invertibility: " ++ show n)
                     (all (\u -> any (\u' -> canon (u * u') n == 1) us) us)
                 | n <- sampleMixed
                 , let us = units n
                 ]
-    , TestList [ TestCase $ assertBool
+    , TestList $ limit [ TestCase $ assertBool
                     ("test nilpotents: " ++ show n)
                     (all (\xs ->  0 `elem` xs) iteratedLists)
                 | n <- sampleMixed
                 , let ns = map fromIntegral $ nilpotents n
                 , let iteratedLists = map (\x -> take (fromIntegral n) $ iterate (\l -> canon (l * x) n) x) ns
                 ]
-    , TestList [ TestCase $ assertBool
+    , TestList $ limit [ TestCase $ assertBool
                     ("test idempotents: " ++ show n)
                     (all (\i -> canon (i * i) n == i) is)
                 | n <- sampleMixed
@@ -143,7 +151,7 @@ zModMTests = TestList
 
 arithmeticFnsTests :: Test
 arithmeticFnsTests = TestList
-    [ TestList [ TestCase $ assertEqual "totient counts number of coprimes <=n" c c'
+    [ TestList $ limit [ TestCase $ assertEqual "totient counts number of coprimes <=n" c c'
                 | n <- sampleMixed
                 , let c = totient n
                 , let c' = genericLength $ filter (areCoprime n) [1 .. n]
@@ -162,12 +170,12 @@ arithmeticFnsTests = TestList
 
 gaussianIntTests :: Test
 gaussianIntTests = TestList
-    [ TestList [ TestCase $ assertEqual "conjugate with 0i" g g'
+    [ TestList $ limit [ TestCase $ assertEqual "conjugate with 0i" g g'
                 | n <- sampleMixed
                 , let g = n :+ 0
                 , let g' = conjugate g
                 ]
-    , TestList [ TestCase $ assertEqual "conjugate mixed ints" (a :+ b) (a' :+ (-b'))
+    , TestList $ limit [ TestCase $ assertEqual "conjugate mixed ints" (a :+ b) (a' :+ (-b'))
                 | g@(a :+ b) <- sampleMixedGaussInts
                 , let (a' :+ b') = conjugate g
                 ]
@@ -181,7 +189,7 @@ gaussianIntTests = TestList
     , TestCase $ assertEqual "magnitude on 5 :+ 3" (34 :: Integer) (magnitude (5 :+ 3))
     , TestCase $ assertBool "gIsPrime on prime" (gIsPrime ((2 :: Integer) :+ 5))
     , TestCase $ assertBool "gIsPrime on composite" (not $ gIsPrime ((3 :: Integer) :+ 5))
-    , TestList [ TestCase $ assertBool "gPrimes generates primes" (gIsPrime p)
+    , TestList $ limit [ TestCase $ assertBool "gPrimes generates primes" (gIsPrime p)
                 | p <- take 100 (gPrimes :: [GaussInt Integer])
                 ]
     , TestCase $ assertEqual "gGCD on even multiple" ((2 :: Integer) :+ 4) (gGCD (2 :+ 4) (12 :+ 24))
@@ -190,14 +198,14 @@ gaussianIntTests = TestList
             (gGCD ((12::Int) :+ 23) (23 :+ 34) `elem` [x :+ y | x <- [(-1)..1], y <- [(-1)..1], abs x + abs y == 1])
     , TestCase $ assertBool "gFindPrime 5" (head (gFindPrime (5::Int)) `elem` [ a :+ b | a <- [2, -2], b <- [1, -1]])
     , TestCase $ assertEqual "gFindPrime 7" [] (gFindPrime (7::Int))
-    , TestList [ TestCase $ assertEqual "gExponentiate on real ints" ((a ^ pow) :+ 0) (gExponentiate g pow)
+    , TestList $ limit [ TestCase $ assertEqual "gExponentiate on real ints" ((a ^ pow) :+ 0) (gExponentiate g pow)
                 | a <- sampleMixed
                 , pow <- [1 .. 5] :: [Integer]
                 , let g = a :+ 0
                 ]
     , TestCase $ assertEqual "gExponentiate on 1st complex int" ((-119 :: Integer) :+ (-120)) (gExponentiate (2 :+ 3) (4 :: Integer))
     , TestCase $ assertEqual "gExponentiate on 2nd complex int" ((122 :: Integer) :+ (-597)) (gExponentiate (2 :+ 3) (5 :: Integer))
-    , TestList [ TestCase $ assertEqual "gFactorize, gMultiply, gExponentiate recover original GaussInt"
+    , TestList $ limit [ TestCase $ assertEqual "gFactorize, gMultiply, gExponentiate recover original GaussInt"
                         g prod
                 | g <- sampleMixedGaussInts
                 , let factors = gFactorize g
