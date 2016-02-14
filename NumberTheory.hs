@@ -403,7 +403,7 @@ data GaussInt a = a :+ a deriving (Ord, Eq)
 instance (Show a, Ord a, Num a) => Show (GaussInt a) where
     show (a :+ b) = show a ++ op ++ b' ++ "i"
         where op = if b > 0 then "+" else "-"
-              b' = if abs b > 1 then show (abs b) else ""
+              b' = if abs b /= 1 then show (abs b) else ""
 
 instance (Monoid a) => Monoid (GaussInt a) where
     mempty = (mempty :: a) :+ (mempty :: a)
