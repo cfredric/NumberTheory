@@ -281,7 +281,8 @@ nilpotents m
     | r == 0    = []
     | otherwise = [ n
                   | n <- [0 .. m - 1]
-                  , elem 0 $ map (\e -> exponentiate n e m) [1 .. r]
+                  , let powers = map (\e -> exponentiate n e m) [1 .. r]
+                  , 0 `elem` powers
                   ]
     where r = genericLength $ units m
 
