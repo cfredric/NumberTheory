@@ -370,21 +370,18 @@ legendre q p
 
 -- |Compute the Kronecker symbol (a|n).
 kronecker :: (Integral a) => a -> a -> a
-kronecker a (-1)
-    | a < 0                = -1
-    | otherwise            = 1
-kronecker a 0
-    | abs a == 1           = 1
-    | otherwise            = 0
-kronecker _ 1              = 1
-kronecker a 2
-    | even a               = 0
-    | abs (a `mod` 8) == 1 = 1
-    | otherwise            = -1
 kronecker a n
-    | isPrime n = legendre a n
-    | otherwise = let u = if a < 0 then -1 else 1
-                  in kronecker a u * product [ kronecker a p ^ e | (p, e) <- nonUnitFactorize n]
+    | n == (-1) && a < 0             = -1
+    | n == (-1)                      = 1
+    | n == 0 && abs a == 1           = 1
+    | n == 0                         = 0
+    | n == 1                         = 1
+    | n == 2 && even a               = 0
+    | n == 2 && abs (a `mod` 8) == 1 = 1
+    | n == 2                         = -1
+    | isPrime n                      = legendre a n
+    | otherwise                      = kronecker a u * product [ kronecker a p ^ e | (p, e) <- nonUnitFactorize n]
+    where u = if a < 0 then -1 else 1
 
 
 -- |Compute tau(n), the number of divisors of n.
