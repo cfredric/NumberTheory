@@ -705,17 +705,17 @@ continuedFractionToQuadratic frac@(Finite _) =
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
         let collapsePeriodicLevel :: a -> (Monomial a, Monomial a) -> (Monomial a, Monomial a)
-            collapsePeriodicLevel p (num@(nx, nu), (dx, du)) = reduceMonomials (p*nx + dx, p*nu + du) num
+            collapsePeriodicLevel p (num@(nx, nu), (dx, du)) = reduceMonomials (p * nx + dx, p * nu + du) num
             ((a, b), (j, k)) = foldr collapsePeriodicLevel ((last ps, 1), (1, 0)) (init ps)
-            d = a*a - 2*a*k + 4*b*j + k*k
+            d = a * a - 2 * a * k + 4 * b * j + k * k
             c = 1
             m = a - k
-            q = 2*j
+            q = 2 * j
         in reduceQuad $ Quad (m, c, d, q)
     | otherwise =
         let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
             collapseFiniteLevel :: a -> Quadratic a -> Quadratic a
-            collapseFiniteLevel a (Quad (m', c', d', q')) = reduceQuad $ Quad (a*m'*m' + q'*m' - a*c'*c'*d', (-q')*c', d', m'*m' - c'*c'*d')
+            collapseFiniteLevel a (Quad (m', c', d', q')) = reduceQuad $ Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
             quad = foldr collapseFiniteLevel (Quad (m, c, d, q)) fs
         in reduceQuad quad
 
