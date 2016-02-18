@@ -73,10 +73,10 @@ module NumberTheory (
     continuedFractionFromRational,
     continuedFractionFromQuadratic,
     continuedFractionToRational,
-    continuedFractionToFractional,
+    continuedFractionToFloating,
     continuedFractionToQuadratic,
     reduceQuad,
-    quadToDouble
+    quadToFloating
 ) where
 
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
@@ -686,8 +686,8 @@ continuedFractionFromRational rat
 -- |Convert a continued fraction to a Fractional type. This is lossy due to
 -- precision in the Fractional type, and due to conversion of irrational continued
 -- fractions to rational types.
-continuedFractionToFractional :: (Fractional a) => ContinuedFraction Integer -> a
-continuedFractionToFractional = fromRational . continuedFractionToRational
+continuedFractionToFloating :: (Integral a, Floating b) => ContinuedFraction a -> b
+continuedFractionToFloating = quadToFloating . continuedFractionToQuadratic
 
 -- |Monomial type. (a, b) represents a*x + b.
 type Monomial a = (a, a)
@@ -740,5 +740,5 @@ reduceQuad (Quad (m, c, d, q))
     c' = cd * c
     d' = div d $ cd * cd
 
-quadToDouble :: Integral a => Quadratic a -> Double
-quadToDouble (Quad (m, c, d, q)) = (fromIntegral m + fromIntegral c * (sqrt :: Double -> Double) (fromIntegral d)) / fromIntegral q
+quadToFloating :: (Integral a, Floating b) => Quadratic a -> b
+quadToFloating (Quad (m, c, d, q)) = (fromIntegral m + fromIntegral c * sqrt (fromIntegral d)) / fromIntegral q
