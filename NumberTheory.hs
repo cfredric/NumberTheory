@@ -68,11 +68,13 @@ module NumberTheory (
     asSumOfSquares,
     -- Continued fraction functions
     ContinuedFraction(Finite, Infinite),
+    Quadratic(Quad),
     continuedFractionFromDouble,
     continuedFractionFromRational,
     continuedFractionFromQuadratic,
     continuedFractionToRational,
-    continuedFractionToFractional
+    continuedFractionToFractional,
+    continuedFractionToQuadratic
 ) where
 
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
@@ -612,6 +614,7 @@ continuedFractionFromDouble x precision
     getTs :: Integral a => Double -> a -> [Double]
     getTs y n = reverse $ tRunner [y] n
         where
+        tRunner [] _ = error "improper call of tRunner. This should never happen."
         tRunner ts 0 = ts
         tRunner ts@(t : _) m
             | tn == 0   = ts
@@ -630,6 +633,7 @@ continuedFractionFromQuadratic m0 d q0
         in helper [(m0, q0, a0)]
     where
     helper :: [(a, a, a)] -> ContinuedFraction a
+    helper [] = error "improper call to helper function. This will never happen."
     helper ts@((mp, qp, ap) : _) =
         let mn = ap * qp - mp
             qn = (truncate :: Double -> a) $ getNextQ mn qp
@@ -673,3 +677,38 @@ continuedFractionFromRational rat
 -- fractions to rational types.
 continuedFractionToFractional :: (Fractional a) => ContinuedFraction Integer -> a
 continuedFractionToFractional = fromRational . continuedFractionToRational
+
+-- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
+data Quadratic a = Quad (a, a, a, a)
+
+instance (Show a) => Show (Quadratic a) where
+    show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
+
+-- |Monomial type. (a, b) represents a*x + b.
+type Monomial a = (a, a)
+
+-- |Convert a continued fraction to a quadratic number (m + sqrt(d))/q.
+continuedFractionToQuadratic :: (Integral a) => ContinuedFraction a -> Quadratic a
+continuedFractionToQuadratic frac@(Finite _) =
+    let rat = continuedFractionToRational frac
+    in Quad (numerator rat, 0, 0, denominator rat)
+continuedFractionToQuadratic (Infinite (fs, ps))
+    | null fs   =
+        let collapsePeriodicLevel :: (Integral a) => a -> (Monomial a, Monomial a) -> (Monomial a, Monomial a)
+            collapsePeriodicLevel f (num@(nx, nu), (dx, du)) = ((f*nx + dx, f*nu + du), num)
+            ((a, b), (j, k)) = foldr collapsePeriodicLevel ((1, last ps), (1, 0)) (init ps)
+            d = a*a + 4*b*j - 4*j*k
+            c = product . map (\(p, e) -> p ^ (e `div` 2)) . filter (\(_, e) -> even e) $ factorize d
+            d' = d `div` (c * c)
+            m = a
+            q = 2*j
+            common = gcd m $ gcd c q
+            m' = m `div` common
+            c' = c `div` common
+            q' = q `div` common
+        in Quad (m', c', d', q')
+    | otherwise =
+        let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
+            collapseFiniteLevel :: (Integral a) => a -> Quadratic a -> Quadratic a
+            collapseFiniteLevel a (Quad (m', c', d', q')) = Quad (a*m'*m' + q'*m' - a*c'*c'*d', (-q')*c', d', m'*m' - c'*c'*d')
+        in foldr collapseFiniteLevel (Quad (m, c, d, q)) fs
