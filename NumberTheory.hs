@@ -595,11 +595,12 @@ asSumOfSquares n = Set.toList . Set.fromList $
 -- (that is, a number that can be the root of some quadratic polynomial), then
 -- the infinite list of coefficients consists of a finite sequence of coefficients
 -- followed by a (finite) sequence of coefficients that repeats indefinitely.
+-- NOTE: for performance reasons, each sequence is stored in reverse order.
 data ContinuedFraction a = Finite [a] | Infinite ([a], [a])
 
 instance (Show a) => Show (ContinuedFraction a) where
-    show (Finite as) = "Finite " ++ show as
-    show (Infinite (as, ps)) = "Infinite " ++ show as ++ show ps ++ "..."
+    show (Finite as) = "Finite " ++ show (reverse as)
+    show (Infinite (as, ps)) = "Infinite " ++ show (reverse as) ++ show (reverse ps) ++ "..."
 
 -- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
 data Quadratic a = Quad (a, a, a, a) deriving (Eq)
@@ -613,7 +614,7 @@ continuedFractionFromDouble x precision
     | precision < 1 = Finite []
     | otherwise     =
         let ts = getTs (fractionalPart x) precision
-        in Finite $ integralPart x : map (integralPart . recip) (filter (/= 0) ts)
+        in Finite $ reverse $ integralPart x : map (integralPart . recip) (filter (/= 0) ts)
     where
     integralPart :: Double -> a
     integralPart n = fst $ (properFraction :: Double -> (a, Double)) n
@@ -647,11 +648,10 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
                 let mn = ap * qp - mp
                     qn = (truncate :: Double -> a) $ getNextQ mn qp
                     an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
-                    ts' = reverse ts
-                    as' = map third ts'
-                in case elemIndex (mn, qn, an) ts' of
+                    as = map third ts
+                in case elemIndex (mn, qn, an) ts of
                     -- We've hit the first repetition of the period
-                    Just idx -> Infinite (take idx as', drop idx as')
+                    Just idx -> Infinite (drop (idx + 1) as, take (idx + 1) as)
                     -- Haven't hit the end of the period yet, keep going as usual
                     Nothing  -> helper $ (mn, qn, an) : ts
             third :: (a, b, c) -> c
@@ -668,17 +668,19 @@ continuedFractionToRational :: (Integral a) => ContinuedFraction a -> Ratio a
 continuedFractionToRational frac =
     let list = case frac of
             Finite as              -> as
-            Infinite (as, periods) -> as ++ take 35 (cycle periods)
-    in foldr (\ai rat -> (ai % 1) + (1 / rat)) (last list % 1) (init list)
+            Infinite (as, periods) -> (reverse . take 35 $ cycle (reverse periods)) ++ as
+        collapse :: (Integral a) => Ratio a -> a -> Ratio a
+        collapse rat ai = (ai % 1) + (1 / rat)
+    in foldl collapse (head list % 1) (tail list)
 
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
 continuedFractionFromRational :: Integral a => Ratio a -> ContinuedFraction a
 continuedFractionFromRational rat
     | denominator rat == 1    = Finite [numerator rat]
-    | numerator fracPart == 1 = Finite [intPart, denominator fracPart]
+    | numerator fracPart == 1 = Finite $ reverse [intPart, denominator fracPart]
     | otherwise               =
         let Finite trail = continuedFractionFromRational (1 / fracPart)
-        in Finite (intPart : trail)
+        in Finite (trail ++ [intPart])
     where
     intPart = numerator rat `div` denominator rat
     fracPart = rat - (intPart % 1)
@@ -704,9 +706,9 @@ continuedFractionToQuadratic frac@(Finite _) =
     in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
-        let collapsePeriodicLevel :: a -> (Monomial a, Monomial a) -> (Monomial a, Monomial a)
-            collapsePeriodicLevel p (num@(nx, nu), (dx, du)) = reduceMonomials (p * nx + dx, p * nu + du) num
-            ((a, b), (j, k)) = foldr collapsePeriodicLevel ((last ps, 1), (1, 0)) (init ps)
+        let collapsePeriodicLevel :: (Monomial a, Monomial a) -> a -> (Monomial a, Monomial a)
+            collapsePeriodicLevel (num@(nx, nu), (dx, du)) p = reduceMonomials (p * nx + dx, p * nu + du) num
+            ((a, b), (j, k)) = foldl collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
             d = a * a - 2 * a * k + 4 * b * j + k * k
             c = 1
             m = a - k
@@ -714,9 +716,9 @@ continuedFractionToQuadratic (Infinite (fs, ps))
         in reduceQuad $ Quad (m, c, d, q)
     | otherwise =
         let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
-            collapseFiniteLevel :: a -> Quadratic a -> Quadratic a
-            collapseFiniteLevel a (Quad (m', c', d', q')) = reduceQuad $ Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
-            quad = foldr collapseFiniteLevel (Quad (m, c, d, q)) fs
+            collapseFiniteLevel :: Quadratic a -> a -> Quadratic a
+            collapseFiniteLevel (Quad (m', c', d', q')) a = reduceQuad $ Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
+            quad = foldl collapseFiniteLevel (Quad (m, c, d, q)) fs
         in reduceQuad quad
 
 reduceQuad :: Integral a => Quadratic a -> Quadratic a
