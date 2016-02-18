@@ -74,7 +74,9 @@ module NumberTheory (
     continuedFractionFromQuadratic,
     continuedFractionToRational,
     continuedFractionToFractional,
-    continuedFractionToQuadratic
+    continuedFractionToQuadratic,
+    reduceQuad,
+    quadToDouble
 ) where
 
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
@@ -83,6 +85,7 @@ import           Data.Monoid
 import qualified Data.Numbers.Primes  as Primes (primes)
 import           Data.Ratio                     ((%), denominator, numerator, Ratio)
 import qualified Data.Set             as Set    (fromList, Set, size, toList)
+import qualified Math.NumberTheory.Primes.Factorisation as F (factorise)
 
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
@@ -598,6 +601,12 @@ instance (Show a) => Show (ContinuedFraction a) where
     show (Finite as) = "Finite " ++ show as
     show (Infinite (as, ps)) = "Infinite " ++ show as ++ show ps ++ "..."
 
+-- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
+data Quadratic a = Quad (a, a, a, a) deriving (Eq)
+
+instance (Show a) => Show (Quadratic a) where
+    show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
+
 -- |Convert a Double to a (finite) continued fraction. This is inherently lossy.
 continuedFractionFromDouble :: forall a. (Integral a) => Double -> a -> ContinuedFraction a
 continuedFractionFromDouble x precision
@@ -623,32 +632,34 @@ continuedFractionFromDouble x precision
 
 -- |Convert the quadratic number (m0 + sqrt(d)) / q0 to its continued fraction
 -- representation.
-continuedFractionFromQuadratic :: forall a. (Integral a) => a -> a -> a -> ContinuedFraction a
-continuedFractionFromQuadratic m0 d q0
+continuedFractionFromQuadratic :: forall a. (Integral a) => Quadratic a -> ContinuedFraction a
+continuedFractionFromQuadratic (Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
+    | c == 0                            = continuedFractionFromRational (m0 % q0)
+    | c /= 1                            = continuedFractionFromQuadratic (Quad (m0, 1, d * c * c, q0))
     | isIntegral $ sqrti d              = continuedFractionFromRational ((m0 + (floor . sqrti $ d)) % q0)
-    | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (m0 * q0) (d * q0 * q0) (q0 * q0)
+    | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (Quad (m0 * q0, c, d * q0 * q0, q0 * q0))
     | otherwise                         =
         let a0 = truncate $ (fromIntegral m0 + sqrti d) / fromIntegral q0
+            helper :: [(a, a, a)] -> ContinuedFraction a
+            helper [] = error "improper call to helper function. This will never happen."
+            helper ts@((mp, qp, ap) : _) =
+                let mn = ap * qp - mp
+                    qn = (truncate :: Double -> a) $ getNextQ mn qp
+                    an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
+                    ts' = reverse ts
+                    as' = map third ts'
+                in case elemIndex (mn, qn, an) ts' of
+                    -- We've hit the first repetition of the period
+                    Just idx -> Infinite (take idx as', drop idx as')
+                    -- Haven't hit the end of the period yet, keep going as usual
+                    Nothing  -> helper $ (mn, qn, an) : ts
+            third :: (a, b, c) -> c
+            third (_, _, x) = x
         in helper [(m0, q0, a0)]
     where
-    helper :: [(a, a, a)] -> ContinuedFraction a
-    helper [] = error "improper call to helper function. This will never happen."
-    helper ts@((mp, qp, ap) : _) =
-        let mn = ap * qp - mp
-            qn = (truncate :: Double -> a) $ getNextQ mn qp
-            an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
-            ts' = reverse ts
-            as' = map third ts'
-        in case elemIndex (mn, qn, an) ts' of
-            -- We've hit the first repetition of the period
-            Just idx -> Infinite (take idx as', drop idx as')
-            -- Haven't hit the end of the period yet, keep going as usual
-            Nothing  -> helper $ (mn, qn, an) : ts
     getNextQ :: a -> a -> Double
     getNextQ mp qp = fromIntegral (d - mp * mp) / fromIntegral qp
-    third :: (a, b, c) -> c
-    third (_, _, x) = x
 
 -- |Convert a continued fraction to a rational number. If the fraction is finite,
 -- then this is an exact conversion. If the fraction is infinite, this conversion
@@ -678,37 +689,56 @@ continuedFractionFromRational rat
 continuedFractionToFractional :: (Fractional a) => ContinuedFraction Integer -> a
 continuedFractionToFractional = fromRational . continuedFractionToRational
 
--- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
-data Quadratic a = Quad (a, a, a, a)
-
-instance (Show a) => Show (Quadratic a) where
-    show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
-
 -- |Monomial type. (a, b) represents a*x + b.
 type Monomial a = (a, a)
 
 -- |Convert a continued fraction to a quadratic number (m + sqrt(d))/q.
-continuedFractionToQuadratic :: (Integral a) => ContinuedFraction a -> Quadratic a
+continuedFractionToQuadratic :: forall a. (Integral a) => ContinuedFraction a -> Quadratic a
 continuedFractionToQuadratic frac@(Finite _) =
     let rat = continuedFractionToRational frac
-    in Quad (numerator rat, 0, 0, denominator rat)
+    in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
-        let collapsePeriodicLevel :: (Integral a) => a -> (Monomial a, Monomial a) -> (Monomial a, Monomial a)
-            collapsePeriodicLevel f (num@(nx, nu), (dx, du)) = ((f*nx + dx, f*nu + du), num)
-            ((a, b), (j, k)) = foldr collapsePeriodicLevel ((1, last ps), (1, 0)) (init ps)
-            d = a*a + 4*b*j - 4*j*k
-            c = product . map (\(p, e) -> p ^ (e `div` 2)) . filter (\(_, e) -> even e) $ factorize d
-            d' = d `div` (c * c)
-            m = a
+        let collapsePeriodicLevel :: a -> (Monomial a, Monomial a) -> (Monomial a, Monomial a)
+            collapsePeriodicLevel p (num@(nx, nu), (dx, du)) = ((p*nx + dx, p*nu + du), num)
+            ((a, b), (j, k)) = foldr collapsePeriodicLevel ((last ps, 1), (1, 0)) (init ps)
+            d = a*a - 2*a*k + 4*b*j + k*k
+            c = 1
+            m = a - k
             q = 2*j
-            common = gcd m $ gcd c q
-            m' = m `div` common
-            c' = c `div` common
-            q' = q `div` common
-        in Quad (m', c', d', q')
+        in reduceQuad $ Quad (m, c, d, q)
     | otherwise =
         let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
-            collapseFiniteLevel :: (Integral a) => a -> Quadratic a -> Quadratic a
-            collapseFiniteLevel a (Quad (m', c', d', q')) = Quad (a*m'*m' + q'*m' - a*c'*c'*d', (-q')*c', d', m'*m' - c'*c'*d')
-        in foldr collapseFiniteLevel (Quad (m, c, d, q)) fs
+            collapseFiniteLevel :: a -> Quadratic a -> Quadratic a
+            collapseFiniteLevel a (Quad (m', c', d', q')) = reduceQuad $ Quad (a*m'*m' + q'*m' - a*c'*c'*d', (-q')*c', d', m'*m' - c'*c'*d')
+            quad = foldr collapseFiniteLevel (Quad (m, c, d, q)) fs
+        in reduceQuad quad
+
+reduceQuad :: Integral a => Quadratic a -> Quadratic a
+reduceQuad (Quad (m, c, d, q))
+    | d == 0  || c == 0 =
+        --normal rational, easy case
+        let common = gcd m q
+            [m', q'] = map (`div` common) [m, q]
+            [mf, qf] = map (if q' < 0 then negate else id) [m', q']
+        in Quad (mf, 0, 0, qf)
+    | d' == 1 =
+        --normal rational, disguised as quadratic
+        let m' = m + c'
+            common = gcd m' q
+            [m'', q''] = map (`div` common) [m', q]
+            [mf, qf] = map (if q'' < 0 then negate else id) [m'', q'']
+        in Quad (mf, 0, 0, qf)
+    | otherwise =
+        --general case
+        let common = gcd m $ gcd c' q
+            [mi, ci, qi] = map (`div` common) [m, c', q]
+            [mf, cf, qf] = map (if qi < 0 then negate else id) [mi, ci, qi]
+        in Quad (mf, cf, d', qf)
+    where
+    cd = fromIntegral . product . map (\(p, e) -> p ^ div e 2) . F.factorise $ fromIntegral d
+    c' = cd * c
+    d' = div d $ cd * cd
+
+quadToDouble :: Integral a => Quadratic a -> Double
+quadToDouble (Quad (m, c, d, q)) = (fromIntegral m + fromIntegral c * (sqrt :: Double -> Double) (fromIntegral d)) / fromIntegral q
