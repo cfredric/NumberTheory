@@ -692,6 +692,11 @@ continuedFractionToFloating = quadToFloating . continuedFractionToQuadratic
 -- |Monomial type. (a, b) represents a*x + b.
 type Monomial a = (a, a)
 
+reduceMonomials :: (Integral a) => Monomial a -> Monomial a -> (Monomial a, Monomial a)
+reduceMonomials (fn, fd) (sn, sd) =
+    let g = gcd fn $ gcd fd $ gcd sn sd
+    in ((div fn g, div fd g), (div sn g, div sd g))
+
 -- |Convert a continued fraction to a quadratic number (m + sqrt(d))/q.
 continuedFractionToQuadratic :: forall a. (Integral a) => ContinuedFraction a -> Quadratic a
 continuedFractionToQuadratic frac@(Finite _) =
@@ -700,7 +705,7 @@ continuedFractionToQuadratic frac@(Finite _) =
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
         let collapsePeriodicLevel :: a -> (Monomial a, Monomial a) -> (Monomial a, Monomial a)
-            collapsePeriodicLevel p (num@(nx, nu), (dx, du)) = ((p*nx + dx, p*nu + du), num)
+            collapsePeriodicLevel p (num@(nx, nu), (dx, du)) = reduceMonomials (p*nx + dx, p*nu + du) num
             ((a, b), (j, k)) = foldr collapsePeriodicLevel ((last ps, 1), (1, 0)) (init ps)
             d = a*a - 2*a*k + 4*b*j + k*k
             c = 1
