@@ -642,8 +642,7 @@ continuedFractionFromDouble x precision
             | otherwise = tRunner (tn : ts) (m - 1)
             where tn = fractionalPart $ recip t
 
--- |Convert the quadratic number (m0 + sqrt(d)) / q0 to its continued fraction
--- representation.
+-- |Convert a quadratic number to its continued fraction representation.
 continuedFractionFromQuadratic :: forall a. (Integral a) => Quadratic a -> ContinuedFraction a
 continuedFractionFromQuadratic (Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
@@ -696,9 +695,8 @@ continuedFractionFromRational rat
     intPart = numerator rat `div` denominator rat
     fracPart = rat - (intPart % 1)
 
--- |Convert a continued fraction to a Fractional type. This is lossy due to
--- precision in the Fractional type, and due to conversion of irrational continued
--- fractions to rational types.
+-- |Convert a continued fraction to a Floating type. This is lossy due to
+-- precision in the Floating type.
 continuedFractionToFloating :: (Integral a, Floating b) => ContinuedFraction a -> b
 continuedFractionToFloating = quadToFloating . continuedFractionToQuadratic
 
@@ -710,7 +708,7 @@ reduceBinomials (fn, fd) (sn, sd) =
     let g = gcd fn $ gcd fd $ gcd sn sd
     in ((div fn g, div fd g), (div sn g, div sd g))
 
--- |Convert a continued fraction to a quadratic number (m + sqrt(d))/q.
+-- |Convert a continued fraction to a quadratic number.
 continuedFractionToQuadratic :: forall a. (Integral a) => ContinuedFraction a -> Quadratic a
 continuedFractionToQuadratic frac@(Finite _) =
     let rat = continuedFractionToRational frac
@@ -758,5 +756,6 @@ reduceQuad (Quad (m, c, d, q))
     c' = cd * c
     d' = div d $ cd * cd
 
+-- |Convert a quadratic number to a Floating approximation.
 quadToFloating :: (Integral a, Floating b) => Quadratic a -> b
 quadToFloating (Quad (m, c, d, q)) = (fromIntegral m + fromIntegral c * sqrt (fromIntegral d)) / fromIntegral q
