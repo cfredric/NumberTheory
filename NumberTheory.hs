@@ -68,6 +68,8 @@ module NumberTheory (
     asSumOfSquares,
     -- Continued fraction functions
     ContinuedFraction(Finite, Infinite),
+    finitePart,
+    periodicPart,
     Quadratic(Quad),
     continuedFractionFromDouble,
     continuedFractionFromRational,
@@ -598,6 +600,14 @@ asSumOfSquares n = Set.toList . Set.fromList $
 -- followed by a (finite) sequence of coefficients that repeats indefinitely.
 -- NOTE: for performance reasons, each sequence is stored in reverse order.
 data ContinuedFraction a = Finite [a] | Infinite ([a], [a])
+
+finitePart :: ContinuedFraction a -> [a]
+finitePart (Finite as) = reverse as
+finitePart (Infinite (fs, _)) = reverse fs
+
+periodicPart :: ContinuedFraction a -> [a]
+periodicPart (Finite _) = []
+periodicPart (Infinite (_, ps)) = reverse ps
 
 instance (Show a) => Show (ContinuedFraction a) where
     show (Finite as) = "Finite " ++ show (reverse as)
