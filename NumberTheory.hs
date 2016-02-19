@@ -692,11 +692,11 @@ continuedFractionFromRational rat
 continuedFractionToFloating :: (Integral a, Floating b) => ContinuedFraction a -> b
 continuedFractionToFloating = quadToFloating . continuedFractionToQuadratic
 
--- |Monomial type. (a, b) represents a*x + b.
-type Monomial a = (a, a)
+-- |Binomial type. (a, b) represents a*x + b.
+type Binomial a = (a, a)
 
-reduceMonomials :: (Integral a) => Monomial a -> Monomial a -> (Monomial a, Monomial a)
-reduceMonomials (fn, fd) (sn, sd) =
+reduceBinomials :: (Integral a) => Binomial a -> Binomial a -> (Binomial a, Binomial a)
+reduceBinomials (fn, fd) (sn, sd) =
     let g = gcd fn $ gcd fd $ gcd sn sd
     in ((div fn g, div fd g), (div sn g, div sd g))
 
@@ -707,9 +707,9 @@ continuedFractionToQuadratic frac@(Finite _) =
     in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
-        let collapsePeriodicLevel :: (Monomial a, Monomial a) -> a -> (Monomial a, Monomial a)
+        let collapsePeriodicLevel :: (Binomial a, Binomial a) -> a -> (Binomial a, Binomial a)
             collapsePeriodicLevel (num@(!nx, !nu), (!dx, !du)) !p = ((p * nx + dx, p * nu + du), num)
-            ((a, b), (j, k)) = uncurry reduceMonomials $ foldl' collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
+            ((a, b), (j, k)) = uncurry reduceBinomials $ foldl' collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
             d = a * a - 2 * a * k + 4 * b * j + k * k
             c = 1
             m = a - k
