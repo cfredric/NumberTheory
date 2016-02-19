@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
 -- |A library for doing number-theoretic computations. This includes computations
 -- in Z mod m (henceforth also written Zm), Z, Z x Zi (the Gaussian integers),
 -- and some computations with continued fractions.
@@ -79,6 +79,7 @@ module NumberTheory (
     quadToFloating
 ) where
 
+import           Data.Foldable                  (foldl')
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
 import qualified Data.Map             as Map    (fromListWith, toList)
 import           Data.Monoid
@@ -644,7 +645,7 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
         let a0 = truncate $ (fromIntegral m0 + sqrti d) / fromIntegral q0
             helper :: [(a, a, a)] -> ContinuedFraction a
             helper [] = error "improper call to helper function. This will never happen."
-            helper ts@((mp, qp, ap) : _) =
+            helper ts@((!mp, !qp, !ap) : _) =
                 let mn = ap * qp - mp
                     qn = (truncate :: Double -> a) $ getNextQ mn qp
                     an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
@@ -655,7 +656,7 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
                     -- Haven't hit the end of the period yet, keep going as usual
                     Nothing  -> helper $ (mn, qn, an) : ts
             third :: (a, b, c) -> c
-            third (_, _, x) = x
+            third (_, _, !x) = x
         in helper [(m0, q0, a0)]
     where
     getNextQ :: a -> a -> Double
@@ -670,8 +671,8 @@ continuedFractionToRational frac =
             Finite as              -> as
             Infinite (as, periods) -> (reverse . take 35 $ cycle (reverse periods)) ++ as
         collapse :: (Integral a) => Ratio a -> a -> Ratio a
-        collapse rat ai = (ai % 1) + (1 / rat)
-    in foldl collapse (head list % 1) (tail list)
+        collapse !rat !ai = (ai % 1) + (1 / rat)
+    in foldl' collapse (head list % 1) (tail list)
 
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
 continuedFractionFromRational :: Integral a => Ratio a -> ContinuedFraction a
@@ -707,8 +708,8 @@ continuedFractionToQuadratic frac@(Finite _) =
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
         let collapsePeriodicLevel :: (Monomial a, Monomial a) -> a -> (Monomial a, Monomial a)
-            collapsePeriodicLevel (num@(nx, nu), (dx, du)) p = reduceMonomials (p * nx + dx, p * nu + du) num
-            ((a, b), (j, k)) = foldl collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
+            collapsePeriodicLevel (num@(!nx, !nu), (!dx, !du)) !p = ((p * nx + dx, p * nu + du), num)
+            ((a, b), (j, k)) = uncurry reduceMonomials $ foldl' collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
             d = a * a - 2 * a * k + 4 * b * j + k * k
             c = 1
             m = a - k
@@ -717,8 +718,8 @@ continuedFractionToQuadratic (Infinite (fs, ps))
     | otherwise =
         let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
             collapseFiniteLevel :: Quadratic a -> a -> Quadratic a
-            collapseFiniteLevel (Quad (m', c', d', q')) a = reduceQuad $ Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
-            quad = foldl collapseFiniteLevel (Quad (m, c, d, q)) fs
+            collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
+            quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
         in reduceQuad quad
 
 reduceQuad :: Integral a => Quadratic a -> Quadratic a
@@ -743,7 +744,7 @@ reduceQuad (Quad (m, c, d, q))
             [mf, cf, qf] = map (if qi < 0 then negate else id) [mi, ci, qi]
         in Quad (mf, cf, d', qf)
     where
-    cd = fromIntegral . product . map (\(p, e) -> p ^ div e 2) . F.factorise $ fromIntegral d
+    cd = fromIntegral . product . map (\(!p, !e) -> p ^ div e 2) . F.factorise $ fromIntegral d
     c' = cd * c
     d' = div d $ cd * cd
 
