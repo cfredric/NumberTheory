@@ -84,9 +84,8 @@ module NumberTheory (
 import           Data.Foldable                  (foldl')
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
 import qualified Data.Map             as Map    (fromListWith, toList)
-import           Data.Monoid
 import qualified Data.Numbers.Primes  as Primes (primes)
-import           Data.Ratio                     ((%), denominator, numerator, Ratio)
+import           Data.Ratio                     ((%), denominator, numerator)
 import qualified Data.Set             as Set    (fromList, Set, size, toList)
 import qualified Math.NumberTheory.Primes.Factorisation as F (factorise)
 
@@ -422,43 +421,39 @@ infix 6 :+
 infixr 8 .^
 infixl 7 .+, .-, .*, ./
 -- |A Gaussian integer is a+bi, where a and b are both integers.
-data GaussInt a = a :+ a deriving (Ord, Eq)
+data GaussInt = Integer :+ Integer deriving (Ord, Eq)
 
-instance (Show a, Ord a, Num a) => Show (GaussInt a) where
+instance Show GaussInt where
     show (a :+ b) = show a ++ op ++ b' ++ "i"
         where op = if b > 0 then "+" else "-"
               b' = if abs b /= 1 then show (abs b) else ""
 
-instance (Monoid a) => Monoid (GaussInt a) where
-    mempty = (mempty :: a) :+ (mempty :: a)
-    (c :+ d) `mappend` (e :+ f) = (c `mappend` e) :+ (d `mappend` f)
-
 -- |The real part of a Gaussian integer.
-real :: GaussInt a -> a
+real :: GaussInt -> Integer
 real (x :+ _) = x
 
 -- |The imaginary part of a Gaussian integer.
-imag :: GaussInt a -> a
+imag :: GaussInt -> Integer
 imag (_ :+ y) = y
 
 -- |Conjugate a Gaussian integer.
-conjugate :: Num a => GaussInt a -> GaussInt a
+conjugate :: GaussInt -> GaussInt
 conjugate (r :+ i) = r :+ (-i)
 
 -- |The square of the magnitude of a Gaussian integer.
-magnitude :: Num a => GaussInt a -> a
+magnitude :: GaussInt -> Integer
 magnitude (x :+ y) = x * x + y * y
 
 -- |Add two Gaussian integers together.
-(.+) :: Num a => GaussInt a -> GaussInt a -> GaussInt a
+(.+) :: GaussInt -> GaussInt -> GaussInt
 (gr :+ gi) .+ (hr :+ hi) = (gr + hr) :+ (gi + hi)
 
 -- |Subtract one Gaussian integer from another.
-(.-) :: Num a => GaussInt a -> GaussInt a -> GaussInt a
+(.-) :: GaussInt -> GaussInt -> GaussInt
 (gr :+ gi) .- (hr :+ hi) = (gr - hr) :+ (gi - hi)
 
 -- |Multiply two Gaussian integers.
-(.*) :: Num a => GaussInt a -> GaussInt a -> GaussInt a
+(.*) :: GaussInt -> GaussInt -> GaussInt
 (gr :+ gi) .* (hr :+ hi) = (gr * hr - hi * gi) :+ (gr * hi + gi * hr)
 
 -- "div" truncates toward -infinity, "quot" truncates toward 0, but we need
@@ -468,25 +463,25 @@ divToNearest :: (Integral a, Integral b) => a -> a -> b
 divToNearest x y = round ((x % 1) / (y % 1))
 
 -- |Divide one Gaussian integer by another.
-(./) :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
+(./) :: GaussInt -> GaussInt -> GaussInt
 g ./ h =
     let nr :+ ni = g .* conjugate h
         denom    = magnitude h
     in divToNearest nr denom :+ divToNearest ni denom
 
 -- |Compute the remainder when dividing one Gaussian integer by another.
-(.%) :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
+(.%) :: GaussInt -> GaussInt -> GaussInt
 g .% m =
     let q = g ./ m
         p = m .* q
     in g .- p
 
 -- |Compute whether a given Gaussian integer is prime.
-gIsPrime :: Integral a => GaussInt a -> Bool
+gIsPrime :: GaussInt -> Bool
 gIsPrime = isPrime . magnitude
 
 -- |An infinte list of the Gaussian primes. This list is in order of ascending magnitude.
-gPrimes :: Integral a => [GaussInt a]
+gPrimes :: [GaussInt]
 gPrimes = [ a' :+ b'
             | mag <- Primes.primes
             , let radius = floor $ sqrti mag
@@ -499,13 +494,13 @@ gPrimes = [ a' :+ b'
             ]
 
 -- |Compute the GCD of two Gaussian integers.
-gGCD :: Integral a => GaussInt a -> GaussInt a -> GaussInt a
+gGCD :: GaussInt -> GaussInt -> GaussInt
 gGCD g h
     | h == 0 :+ 0 = g --done recursing
     | otherwise = gGCD h (g .% h)
 
 -- |Find a Gaussian integer whose magnitude squared is the given prime number.
-gFindPrime :: (Integral a) => a -> GaussInt a
+gFindPrime :: Integer -> GaussInt
 gFindPrime p
     | p == 2 = 1 :+ 1
     | p `mod` 4 == 1 && isPrime p =
@@ -515,7 +510,7 @@ gFindPrime p
     | otherwise = error "p must be prime, and congruent to 3 (mod 4)"
 
 -- |Raise a Gaussian integer to a given power.
-(.^) :: (Integral a) => GaussInt a -> a -> GaussInt a
+(.^) :: (Integral a) => GaussInt -> a -> GaussInt
 a .^ e
     | e < 0     = error "Cannot exponentiate Gaussian Int to negative power"
     | e == 0    = 1 :+ 0
@@ -525,11 +520,11 @@ a .^ e
     s = a .^ div e 2
 
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
-gFactorize :: forall a. (Integral a) => GaussInt a -> [(GaussInt a, a)]
+gFactorize :: GaussInt -> [(GaussInt, Int)]
 gFactorize g
     | g == 0 :+ 0  = [(g, 1)] -- 0 has no prime factors.
     | otherwise =
-        let helper :: [(a, a)] -> GaussInt a -> [(GaussInt a, a)] -> [(GaussInt a, a)]
+        let helper :: [(Integer, Int)] -> GaussInt -> [(GaussInt, Int)] -> [(GaussInt, Int)]
             helper [] g' fs = (g', 1) : fs    -- include the unit.
             helper ((!p, !e) : pt) g' fs
                 | p `mod` 4 == 3 =
@@ -549,12 +544,12 @@ gFactorize g
                     let gp = gFindPrime p
                         (!gNext, !facs) = trialDivide g' [gp, conjugate gp] []
                     in helper pt gNext (facs ++ fs)
-        in helper (reverse . map (\(p, e) -> (fromIntegral p, fromIntegral e)) . F.factorise . fromIntegral $ magnitude g) g []
+        in helper (reverse . F.factorise $ magnitude g) g []
 
 -- Divide a Gaussian integer by a set of (relatively prime) Gaussian integers,
 -- as many times as possible, and return the final quotient as well as a count
 -- of how many times each factor divided the original.
-trialDivide :: (Integral a) => GaussInt a -> [GaussInt a] -> [(GaussInt a, a)] -> (GaussInt a, [(GaussInt a, a)])
+trialDivide :: GaussInt -> [GaussInt] -> [(GaussInt, Int)] -> (GaussInt, [(GaussInt, Int)])
 trialDivide g [] fs = (g, fs)
 trialDivide g (pf : pft) fs
     | g .% pf == 0 :+ 0 =
@@ -565,10 +560,10 @@ trialDivide g (pf : pft) fs
 -- Divide a Gaussian integer by a possible factor, and return how many times
 -- the factor divided it evenly, as well as the result of dividing the original
 -- that many times.
-countEvenDivisions :: forall a. (Integral a) => GaussInt a -> GaussInt a -> (a, GaussInt a)
+countEvenDivisions :: GaussInt -> GaussInt -> (Int, GaussInt)
 countEvenDivisions g pf = helper g 0
     where
-    helper :: GaussInt a -> a -> (a, GaussInt a)
+    helper :: GaussInt -> Int -> (Int, GaussInt)
     helper g' acc
         | g' .% pf == 0:+ 0 = helper (g' ./ pf) (1 + acc)
         | otherwise         = (acc, g')
@@ -624,36 +619,36 @@ asSumOfSquares n = Set.toList . Set.fromList $
 -- the infinite list of coefficients consists of a finite sequence of coefficients
 -- followed by a (finite) sequence of coefficients that repeats indefinitely.
 -- NOTE: for performance reasons, each sequence is stored in reverse order.
-data ContinuedFraction a = Finite [a] | Infinite ([a], [a])
+data ContinuedFraction = Finite [Integer] | Infinite ([Integer], [Integer])
 
-finitePart :: ContinuedFraction a -> [a]
+finitePart :: ContinuedFraction -> [Integer]
 finitePart (Finite as) = reverse as
 finitePart (Infinite (fs, _)) = reverse fs
 
-periodicPart :: ContinuedFraction a -> [a]
+periodicPart :: ContinuedFraction -> [Integer]
 periodicPart (Finite _) = []
 periodicPart (Infinite (_, ps)) = reverse ps
 
-instance (Show a) => Show (ContinuedFraction a) where
+instance Show ContinuedFraction where
     show (Finite as) = "Finite " ++ show (reverse as)
     show (Infinite (as, ps)) = "Infinite " ++ show (reverse as) ++ show (reverse ps) ++ "..."
 
 -- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
-data Quadratic a = Quad (a, a, a, a) deriving (Eq)
+data Quadratic = Quad (Integer, Integer, Integer, Integer) deriving (Eq)
 
-instance (Show a) => Show (Quadratic a) where
+instance Show Quadratic where
     show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
 
 -- |Convert a Double to a (finite) continued fraction. This is inherently lossy.
-continuedFractionFromDouble :: forall a. (Integral a) => Double -> a -> ContinuedFraction a
+continuedFractionFromDouble :: forall a. (Integral a) => Double -> a -> ContinuedFraction
 continuedFractionFromDouble x precision
     | precision < 1 = Finite []
     | otherwise     =
         let ts = getTs (fractionalPart x) precision
         in Finite $ reverse $ integralPart x : map (integralPart . recip) (filter (/= 0) ts)
     where
-    integralPart :: Double -> a
-    integralPart n = fst $ (properFraction :: Double -> (a, Double)) n
+    integralPart :: Double -> Integer
+    integralPart n = fst $ properFraction n
     fractionalPart :: Double -> Double
     fractionalPart 0 = 0
     fractionalPart n = snd $ (properFraction :: Double -> (Integer, Double)) n
@@ -668,7 +663,7 @@ continuedFractionFromDouble x precision
             where tn = fractionalPart $ recip t
 
 -- |Convert a quadratic number to its continued fraction representation.
-continuedFractionFromQuadratic :: forall a. (Integral a) => Quadratic a -> ContinuedFraction a
+continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic (Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
     | c == 0                            = continuedFractionFromRational (m0 % q0)
@@ -677,11 +672,11 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
     | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (Quad (m0 * q0, c, d * q0 * q0, q0 * q0))
     | otherwise                         =
         let a0 = truncate $ (fromIntegral m0 + sqrti d) / fromIntegral q0
-            helper :: [(a, a, a)] -> ContinuedFraction a
+            helper :: [(Integer, Integer, Integer)] -> ContinuedFraction
             helper [] = error "improper call to helper function. This will never happen."
             helper ts@((!mp, !qp, !ap) : _) =
                 let mn = ap * qp - mp
-                    qn = (truncate :: Double -> a) $ getNextQ mn qp
+                    qn = truncate $ getNextQ mn qp
                     an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
                     as = map third ts
                 in case elemIndex (mn, qn, an) ts of
@@ -693,23 +688,23 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
             third (_, _, !x) = x
         in helper [(m0, q0, a0)]
     where
-    getNextQ :: a -> a -> Double
+    getNextQ :: Integer -> Integer -> Double
     getNextQ mp qp = fromIntegral (d - mp * mp) / fromIntegral qp
 
 -- |Convert a continued fraction to a rational number. If the fraction is finite,
 -- then this is an exact conversion. If the fraction is infinite, this conversion
 -- is necessarily lossy, since the fraction does not represent a rational number.
-continuedFractionToRational :: (Integral a) => ContinuedFraction a -> Ratio a
+continuedFractionToRational :: ContinuedFraction -> Rational
 continuedFractionToRational frac =
     let list = case frac of
             Finite as              -> as
             Infinite (as, periods) -> (reverse . take 35 $ cycle (reverse periods)) ++ as
-        collapse :: (Integral a) => Ratio a -> a -> Ratio a
+        collapse :: Rational -> Integer -> Rational
         collapse !rat !ai = (ai % 1) + (1 / rat)
     in foldl' collapse (head list % 1) (tail list)
 
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
-continuedFractionFromRational :: Integral a => Ratio a -> ContinuedFraction a
+continuedFractionFromRational :: Rational -> ContinuedFraction
 continuedFractionFromRational rat
     | denominator rat == 1    = Finite [numerator rat]
     | numerator fracPart == 1 = Finite $ reverse [intPart, denominator fracPart]
@@ -722,7 +717,7 @@ continuedFractionFromRational rat
 
 -- |Convert a continued fraction to a Floating type. This is lossy due to
 -- precision in the Floating type.
-continuedFractionToFloating :: (Integral a, Floating b) => ContinuedFraction a -> b
+continuedFractionToFloating :: (Floating b) => ContinuedFraction -> b
 continuedFractionToFloating = quadToFloating . continuedFractionToQuadratic
 
 -- |Binomial type. (a, b) represents a*x + b.
@@ -734,13 +729,13 @@ reduceBinomials (fn, fd) (sn, sd) =
     in ((div fn g, div fd g), (div sn g, div sd g))
 
 -- |Convert a continued fraction to a quadratic number.
-continuedFractionToQuadratic :: forall a. (Integral a) => ContinuedFraction a -> Quadratic a
+continuedFractionToQuadratic :: ContinuedFraction -> Quadratic
 continuedFractionToQuadratic frac@(Finite _) =
     let rat = continuedFractionToRational frac
     in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
 continuedFractionToQuadratic (Infinite (fs, ps))
     | null fs   =
-        let collapsePeriodicLevel :: (Binomial a, Binomial a) -> a -> (Binomial a, Binomial a)
+        let collapsePeriodicLevel :: (Integral a) => (Binomial a, Binomial a) -> a -> (Binomial a, Binomial a)
             collapsePeriodicLevel (num@(!nx, !nu), (!dx, !du)) !p = ((p * nx + dx, p * nu + du), num)
             ((a, b), (j, k)) = uncurry reduceBinomials $ foldl' collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
             d = a * a - 2 * a * k + 4 * b * j + k * k
@@ -750,12 +745,12 @@ continuedFractionToQuadratic (Infinite (fs, ps))
         in reduceQuad $ Quad (m, c, d, q)
     | otherwise =
         let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
-            collapseFiniteLevel :: Quadratic a -> a -> Quadratic a
+            collapseFiniteLevel :: Quadratic -> Integer -> Quadratic
             collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
             quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
         in reduceQuad quad
 
-reduceQuad :: Integral a => Quadratic a -> Quadratic a
+reduceQuad :: Quadratic -> Quadratic
 reduceQuad (Quad (m, c, d, q))
     | d == 0  || c == 0 =
         --normal rational, easy case
@@ -777,10 +772,10 @@ reduceQuad (Quad (m, c, d, q))
             [mf, cf, qf] = map (if qi < 0 then negate else id) [mi, ci, qi]
         in Quad (mf, cf, d', qf)
     where
-    cd = fromIntegral . product . map (\(!p, !e) -> p ^ div e 2) . F.factorise $ fromIntegral d
+    cd = product . map (\(!p, !e) -> p ^ div e 2) $ F.factorise d
     c' = cd * c
     d' = div d $ cd * cd
 
 -- |Convert a quadratic number to a Floating approximation.
-quadToFloating :: (Integral a, Floating b) => Quadratic a -> b
+quadToFloating :: (Floating a) => Quadratic -> a
 quadToFloating (Quad (m, c, d, q)) = (fromIntegral m + fromIntegral c * sqrt (fromIntegral d)) / fromIntegral q
