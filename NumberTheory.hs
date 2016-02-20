@@ -503,14 +503,14 @@ gGCD g h
     | otherwise = gGCD h (g .% h)
 
 -- |Find a Gaussian integer whose magnitude squared is the given prime number.
-gFindPrime :: (Integral a) => a -> [GaussInt a]
-gFindPrime 2 = [1 :+ 1]
+gFindPrime :: (Integral a) => a -> GaussInt a
 gFindPrime p
+    | p == 2 = 1 :+ 1
     | p `mod` 4 == 1 && isPrime p =
         let r = head $ roots p
             z = exponentiate r (quot (p - 1) 4) p
-        in [gGCD (p :+ 0) (z :+ 1)]
-    | otherwise = []
+        in gGCD (p :+ 0) (z :+ 1)
+    | otherwise = error "p must be prime, and congruent to 3 (mod 4)"
 
 -- |Raise a Gaussian integer to a given power.
 gExponentiate :: (Integral a) => GaussInt a -> a -> GaussInt a
@@ -526,29 +526,51 @@ gExponentiate a e
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
 gFactorize :: forall a. (Integral a) => GaussInt a -> [(GaussInt a, a)]
 gFactorize g
-    | g == 0 :+ 0   = [(0 :+ 0, 1)]
-    | otherwise     =
-    let nonUnits       = concatMap processPrime . nonUnitFactorize $ magnitude g
-        collapse :: GaussInt a -> (GaussInt a, a) -> GaussInt a
-        collapse !acc (!g', !e) = acc .* gExponentiate g' e
-        nonUnitProduct = foldl' collapse (1 :+ 0) nonUnits
-        remainderUnit  = (g ./ nonUnitProduct, 1)
-    in remainderUnit : nonUnits
+    | g == 0 :+ 0  = [(g, 1)] -- 0 has no prime factors.
+    | otherwise =
+        let helper :: [(a, a)] -> GaussInt a -> [(GaussInt a, a)] -> [(GaussInt a, a)]
+            helper [] g' fs = (g', 1) : fs    -- include the unit.
+            helper ((!p, !e) : pt) g' fs
+                | p `mod` 4 == 3 =
+                    -- prime factors congruent to 3 mod 4 are simple.
+                    let pow = div e 2
+                        gp = p :+ 0
+                    in helper pt (g' ./ gExponentiate gp pow) ((gp, pow) : fs)
+                | otherwise      =
+                    -- general case: for every prime factor of the magnitude
+                    -- squared, find a gaussian prime whose magnitude squared
+                    -- is that prime. Then find out how many times the original
+                    -- number is divisible by that gaussian prime and its
+                    -- conjugate. The order that the prime factors are
+                    -- processed doesn't really matter, but it is reversed so
+                    -- that the Guassian primes will be in order of increasing
+                    -- magnitude.
+                    let gp = gFindPrime p
+                        (!gNext, !facs) = trialDivide g' [gp, conjugate gp] []
+                    in helper pt gNext (facs ++ fs)
+        in helper (reverse . nonUnitFactorize $ magnitude g) g []
+
+-- Divide a Gaussian integer by a set of (relatively prime) Gaussian integers,
+-- as many times as possible, and return the final quotient as well as a count
+-- of how many times each factor divided the original.
+trialDivide :: (Integral a) => GaussInt a -> [GaussInt a] -> [(GaussInt a, a)] -> (GaussInt a, [(GaussInt a, a)])
+trialDivide g [] fs = (g, fs)
+trialDivide g (pf : pft) fs
+    | g .% pf == 0 :+ 0 =
+        let (cnt, g') = countEvenDivisions g pf
+        in trialDivide g' pft ((pf, cnt) : fs)
+    | otherwise       = trialDivide g pft fs
+
+-- Divide a Gaussian integer by a possible factor, and return how many times
+-- the factor divided it evenly, as well as the result of dividing the original
+-- that many times.
+countEvenDivisions :: forall a. (Integral a) => GaussInt a -> GaussInt a -> (a, GaussInt a)
+countEvenDivisions g pf = helper g 0
     where
-    processPrime :: (a, a) -> [(GaussInt a, a)]
-    processPrime (p, e)
-        --deal with primes congruent to 3 (mod 4)
-        | p `mod` 4 == 3 = [(p :+ 0, quot e 2)]
-        --deal with all other primes
-        | otherwise      = collapseMultiplicities $ processGaussPrime g []
-        where
-        processGaussPrime :: GaussInt a -> [GaussInt a] -> [GaussInt a]
-        processGaussPrime g' acc = do
-            gp <- gFindPrime p -- find a GaussInt whose magnitude is p
-            let fs = filter (\f -> g' .% f == 0 :+ 0) [gp, conjugate gp] --find the list of even divisors
-            case fs of
-                [] -> acc                                                 -- Couldn't find a factor, so stop recursing
-                f : _ -> processGaussPrime (g' ./ f) (f : acc)    -- add this factor to the list, and keep looking
+    helper :: GaussInt a -> a -> (a, GaussInt a)
+    helper g' acc
+        | g' .% pf == 0:+ 0 = helper (g' ./ pf) (1 + acc)
+        | otherwise         = (acc, g')
 
 ---------------------------------------------------------------------------------
 --Combinatorics and other fun things
