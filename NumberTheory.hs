@@ -529,7 +529,9 @@ gFactorize g
     | g == 0 :+ 0   = [(0 :+ 0, 1)]
     | otherwise     =
     let nonUnits       = concatMap processPrime . nonUnitFactorize $ magnitude g
-        nonUnitProduct = foldr ((.*) . uncurry gExponentiate) (1 :+ 0) nonUnits
+        collapse :: GaussInt a -> (GaussInt a, a) -> GaussInt a
+        collapse !acc (!g', !e) = acc .* gExponentiate g' e
+        nonUnitProduct = foldl' collapse (1 :+ 0) nonUnits
         remainderUnit  = (g ./ nonUnitProduct, 1)
     in remainderUnit : nonUnits
     where
