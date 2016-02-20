@@ -549,7 +549,7 @@ gFactorize g
                     let gp = gFindPrime p
                         (!gNext, !facs) = trialDivide g' [gp, conjugate gp] []
                     in helper pt gNext (facs ++ fs)
-        in helper (reverse . nonUnitFactorize $ magnitude g) g []
+        in helper (reverse . map (\(p, e) -> (fromIntegral p, fromIntegral e)) . F.factorise . fromIntegral $ magnitude g) g []
 
 -- Divide a Gaussian integer by a set of (relatively prime) Gaussian integers,
 -- as many times as possible, and return the final quotient as well as a count
