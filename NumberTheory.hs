@@ -53,11 +53,11 @@ module NumberTheory (
     (.*),
     (./),
     (.%),
+    (.^),
     gIsPrime,
     gPrimes,
     gGCD,
     gFindPrime,
-    gExponentiate,
     gFactorize,
     -- assorted combinatorics
     factorial,
@@ -419,6 +419,8 @@ bigOmega = sum . map snd . nonUnitFactorize
 
 ---------------------------------------------------------------------------------
 infix 6 :+
+infixr 8 .^
+infixl 7 .+, .-, .*, ./
 -- |A Gaussian integer is a+bi, where a and b are both integers.
 data GaussInt a = a :+ a deriving (Ord, Eq)
 
@@ -513,15 +515,14 @@ gFindPrime p
     | otherwise = error "p must be prime, and congruent to 3 (mod 4)"
 
 -- |Raise a Gaussian integer to a given power.
-gExponentiate :: (Integral a) => GaussInt a -> a -> GaussInt a
-gExponentiate a e
+(.^) :: (Integral a) => GaussInt a -> a -> GaussInt a
+a .^ e
     | e < 0     = error "Cannot exponentiate Gaussian Int to negative power"
     | e == 0    = 1 :+ 0
     | even e    = s .* s
-    | otherwise = a .* m
+    | otherwise = a .* a .^ (e - 1)
     where
-    s = gExponentiate a (quot e 2)
-    m = gExponentiate a (e - 1)
+    s = a .^ div e 2
 
 -- |Compute the prime factorization of a Gaussian integer. This is unique up to units (+/- 1, +/- i).
 gFactorize :: forall a. (Integral a) => GaussInt a -> [(GaussInt a, a)]
@@ -535,7 +536,7 @@ gFactorize g
                     -- prime factors congruent to 3 mod 4 are simple.
                     let pow = div e 2
                         gp = p :+ 0
-                    in helper pt (g' ./ gExponentiate gp pow) ((gp, pow) : fs)
+                    in helper pt (g' ./ gp .^ pow) ((gp, pow) : fs)
                 | otherwise      =
                     -- general case: for every prime factor of the magnitude
                     -- squared, find a gaussian prime whose magnitude squared
