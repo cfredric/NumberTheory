@@ -676,7 +676,7 @@ continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
     | c == 0                            = continuedFractionFromRational (m0 % q0)
-    | c /= 1                            = continuedFractionFromQuadratic (Quad (m0, 1, d * c * c, q0))
+    | c /= 1                            = continuedFractionFromQuadratic $ condense quad
     | isIntegral $ sqrti d              = continuedFractionFromRational ((m0 + (floor . sqrti $ d)) % q0)
     | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (Quad (m0 * q0, c, d * q0 * q0, q0 * q0))
     | otherwise                         = caller quad
@@ -701,6 +701,9 @@ continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
 
     getNextQ :: Integer -> Integer -> Double
     getNextQ mp qp = fromIntegral (d - mp * mp) / fromIntegral qp
+
+condense :: Quadratic -> Quadratic
+condense (Quad (m, c, d, q)) = Quad (m, 1, d * c * c, q)
 
 third :: (a, b, c) -> c
 third (_, _, !x) = x
