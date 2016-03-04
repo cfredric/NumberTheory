@@ -676,10 +676,9 @@ continuedFractionFromDouble x precision
 continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
+    | (fixCoefficients . condense . reduceQuad) quad /= quad = continuedFractionFromQuadratic . fixCoefficients . condense $ reduceQuad quad
     | c == 0                            = continuedFractionFromRational (m0 % q0)
-    | c /= 1                            = continuedFractionFromQuadratic $ condense quad
     | Pow.isSquare d                    = continuedFractionFromRational ((m0 + Pow.integerSquareRoot d) % q0)
-    | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (Quad (m0 * q0, c, d * q0 * q0, q0 * q0))
     | otherwise                         = caller quad
     where
     caller :: Quadratic -> ContinuedFraction
@@ -691,7 +690,7 @@ continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     helper [] = error "improper call to helper function. This will never happen."
     helper ts@((!mp, !qp, !ap) : _) =
         let mn = ap * qp - mp
-            qn = truncate $ getNextQ mn qp
+            qn = truncate $ getNextQ mn qp d
             an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
             as = map third ts
         in case elemIndex (mn, qn, an) ts of
@@ -700,11 +699,16 @@ continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
             -- Haven't hit the end of the period yet, keep going as usual
             Nothing  -> helper $ (mn, qn, an) : ts
 
-    getNextQ :: Integer -> Integer -> Double
-    getNextQ mp qp = fromIntegral (d - mp * mp) / fromIntegral qp
+getNextQ :: Integer -> Integer -> Integer -> Double
+getNextQ mp qp d = fromIntegral (d - mp * mp) / fromIntegral qp
 
 condense :: Quadratic -> Quadratic
 condense (Quad (m, c, d, q)) = Quad (m, 1, d * c * c, q)
+
+fixCoefficients :: Quadratic -> Quadratic
+fixCoefficients quad@(Quad (m, c, d, q))
+    | not . isIntegral $ getNextQ m q d = Quad (m * q, c, d * q * q, q * q)
+    | otherwise = quad
 
 third :: (a, b, c) -> c
 third (_, _, !x) = x
