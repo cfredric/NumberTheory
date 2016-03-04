@@ -11,10 +11,10 @@ main = runTestTT tests
 tests :: Test
 tests = TestList
     [ TestLabel "Continued Fraction Tests" continuedFractionTests
-    , TestLabel "Pythagorean Triples Tests" pythTests
-    , TestLabel "Z mod M Tests" zModMTests
-    , TestLabel "Z Tests" zTests
-    , TestLabel "Arithmetic Functions tests" arithmeticFnsTests
+--    , TestLabel "Pythagorean Triples Tests" pythTests
+--    , TestLabel "Z mod M Tests" zModMTests
+--    , TestLabel "Z Tests" zTests
+--    , TestLabel "Arithmetic Functions tests" arithmeticFnsTests
     ]
 
 limit :: [a] -> [a]
