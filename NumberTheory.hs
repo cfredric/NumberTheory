@@ -673,32 +673,37 @@ continuedFractionFromDouble x precision
 
 -- |Convert a quadratic number to its continued fraction representation.
 continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
-continuedFractionFromQuadratic (Quad (m0, c, d, q0))
+continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
     | c == 0                            = continuedFractionFromRational (m0 % q0)
     | c /= 1                            = continuedFractionFromQuadratic (Quad (m0, 1, d * c * c, q0))
     | isIntegral $ sqrti d              = continuedFractionFromRational ((m0 + (floor . sqrti $ d)) % q0)
     | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (Quad (m0 * q0, c, d * q0 * q0, q0 * q0))
-    | otherwise                         =
-        let a0 = truncate $ (fromIntegral m0 + sqrti d) / fromIntegral q0
-            helper :: [(Integer, Integer, Integer)] -> ContinuedFraction
-            helper [] = error "improper call to helper function. This will never happen."
-            helper ts@((!mp, !qp, !ap) : _) =
-                let mn = ap * qp - mp
-                    qn = truncate $ getNextQ mn qp
-                    an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
-                    as = map third ts
-                in case elemIndex (mn, qn, an) ts of
-                    -- We've hit the first repetition of the period
-                    Just idx -> Infinite Positive (drop (idx + 1) as) (take (idx + 1) as)
-                    -- Haven't hit the end of the period yet, keep going as usual
-                    Nothing  -> helper $ (mn, qn, an) : ts
-            third :: (a, b, c) -> c
-            third (_, _, !x) = x
-        in helper [(m0, q0, a0)]
+    | otherwise                         = caller quad
     where
+    caller :: Quadratic -> ContinuedFraction
+    caller (Quad (m', _, d', q')) =
+        let a' = truncate $ (fromIntegral m' + sqrti d') / fromIntegral q'
+        in helper [(m', q', a')]
+
+    helper :: [(Integer, Integer, Integer)] -> ContinuedFraction
+    helper [] = error "improper call to helper function. This will never happen."
+    helper ts@((!mp, !qp, !ap) : _) =
+        let mn = ap * qp - mp
+            qn = truncate $ getNextQ mn qp
+            an = truncate ((fromIntegral mn + sqrti d) / fromIntegral qn)
+            as = map third ts
+        in case elemIndex (mn, qn, an) ts of
+            -- We've hit the first repetition of the period
+            Just idx -> Infinite Positive (drop (idx + 1) as) (take (idx + 1) as)
+            -- Haven't hit the end of the period yet, keep going as usual
+            Nothing  -> helper $ (mn, qn, an) : ts
+
     getNextQ :: Integer -> Integer -> Double
     getNextQ mp qp = fromIntegral (d - mp * mp) / fromIntegral qp
+
+third :: (a, b, c) -> c
+third (_, _, !x) = x
 
 -- |Convert a continued fraction to a rational number. If the fraction is finite,
 -- then this is an exact conversion. If the fraction is infinite, this conversion
