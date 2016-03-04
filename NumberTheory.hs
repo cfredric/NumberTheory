@@ -676,6 +676,13 @@ continuedFractionFromDouble x precision
 continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
+    | m0 < 0 && c < 0                   =
+        let cf = continuedFractionFromQuadratic (Quad (-m0, -c, d, q0))
+        in case cf of
+            Zero -> Zero
+            Finite Positive as -> Finite Negative as
+            Infinite Positive as ps -> Infinite Negative as ps
+            _ -> error "Got negative fraction when we expected a positive one"
     | (fixCoefficients . condense . reduceQuad) quad /= quad = continuedFractionFromQuadratic . fixCoefficients . condense $ reduceQuad quad
     | c == 0                            = continuedFractionFromRational (m0 % q0)
     | Pow.isSquare d                    = continuedFractionFromRational ((m0 + Pow.integerSquareRoot d) % q0)
@@ -703,7 +710,7 @@ getNextQ :: Integer -> Integer -> Integer -> Double
 getNextQ mp qp d = fromIntegral (d - mp * mp) / fromIntegral qp
 
 condense :: Quadratic -> Quadratic
-condense (Quad (m, c, d, q)) = Quad (m, 1, d * c * c, q)
+condense (Quad (m, c, d, q)) = Quad (m, signum c, d * c * c, q)
 
 fixCoefficients :: Quadratic -> Quadratic
 fixCoefficients quad@(Quad (m, c, d, q))
