@@ -15,7 +15,6 @@ tests = TestList
     , TestLabel "Z mod M Tests" zModMTests
     , TestLabel "Z Tests" zTests
     , TestLabel "Arithmetic Functions tests" arithmeticFnsTests
-    , TestLabel "Gaussian Integer Tests" gaussianIntTests
     ]
 
 limit :: [a] -> [a]
@@ -36,9 +35,7 @@ samplePrimes :: [Integer]
 samplePrimes = takeWhile (<= last sampleMixed) Primes.primes
 sampleComposites :: [Integer]
 sampleComposites = filter (not . flip elem samplePrimes) sampleMixed
-sampleMixedGaussInts :: [GaussInt Integer]
-sampleMixedGaussInts = [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
-sampleQuadratics :: [Quadratic Integer]
+sampleQuadratics :: [Quadratic]
 sampleQuadratics = [Quad (m, c, d, q) | m <- [0 .. 5], c <- [0 .. 10], d <- [0 .. 10], q <- [1 .. 10]]
 
 zTests :: Test
@@ -167,52 +164,6 @@ arithmeticFnsTests = TestList
     , TestCase $ assertEqual "mobius 5" (-1 :: Integer) (mobius 5)
     , TestCase $ assertEqual "littleOmega 60" (3 :: Integer) (littleOmega 60)
     , TestCase $ assertEqual "bigOmega 60" (4 :: Integer) (bigOmega 60)
-    ]
-
-gaussianIntTests :: Test
-gaussianIntTests = TestList
-    [ TestList $ limit [ TestCase $ assertEqual "conjugate with 0i" g g'
-                | n <- sampleMixed
-                , let g = n :+ 0
-                , let g' = conjugate g
-                ]
-    , TestList $ limit [ TestCase $ assertEqual "conjugate mixed ints" (a :+ b) (a' :+ (-b'))
-                | g@(a :+ b) <- sampleMixedGaussInts
-                , let (a' :+ b') = conjugate g
-                ]
-    , TestCase $ assertEqual "Gaussian int multiplication" ((2 :: Integer) :+ 42) ((5 :+ 3) .* (4 :+ 6))
-    , TestCase $ assertEqual "Gaussian div on even division" ((4 :: Integer) :+ 6) ((2 :+ 42) ./ (5 :+ 3))
-    , TestCase $ assertEqual "Gaussian div on uneven division" ((4 :: Integer) :+ 6) ((2 :+ 43) ./ (5 :+ 3))
-    , TestCase $ assertEqual "Gaussian div on negative divisor" ((4 :: Integer) :+ 6) (((-2) :+ (-43)) ./ ((-5) :+ (-3)))
-    , TestCase $ assertEqual "Gaussian mod on positive case" ((0 :: Integer) :+ 1) ((2 :+ 43) .% (5 :+ 3))
-    , TestCase $ assertEqual "Gaussian mod on negative case" ((0 :: Integer) :+ (-1)) (((-2) :+ (-43)) .% (5 :+ 3))
-    , TestCase $ assertEqual "magnitude on integer case" (25 :: Integer) (magnitude (5 :+ 0))
-    , TestCase $ assertEqual "magnitude on 5 :+ 3" (34 :: Integer) (magnitude (5 :+ 3))
-    , TestCase $ assertBool "gIsPrime on prime" (gIsPrime ((2 :: Integer) :+ 5))
-    , TestCase $ assertBool "gIsPrime on composite" (not $ gIsPrime ((3 :: Integer) :+ 5))
-    , TestList $ limit [ TestCase $ assertBool "gPrimes generates primes" (gIsPrime p)
-                | p <- take 100 (gPrimes :: [GaussInt Integer])
-                ]
-    , TestCase $ assertEqual "gGCD on even multiple" ((2 :: Integer) :+ 4) (gGCD (2 :+ 4) (12 :+ 24))
-    , TestCase $ assertEqual "gGCD on uneven multiple" ((1 :: Integer) :+ 1) (gGCD (2 :+ 4) (5 :+ 3))
-    , TestCase $ assertBool "gGCD on uneven multiple (division rounding test)"
-            (gGCD ((12::Int) :+ 23) (23 :+ 34) `elem` [x :+ y | x <- [(-1)..1], y <- [(-1)..1], abs x + abs y == 1])
-    , TestCase $ assertBool "gFindPrime 5" (head (gFindPrime (5::Int)) `elem` [ a :+ b | a <- [2, -2], b <- [1, -1]])
-    , TestCase $ assertEqual "gFindPrime 7" [] (gFindPrime (7::Int))
-    , TestList $ limit [ TestCase $ assertEqual "gExponentiate on real ints" ((a ^ pow) :+ 0) (gExponentiate g pow)
-                | a <- sampleMixed
-                , pow <- [1 .. 5] :: [Integer]
-                , let g = a :+ 0
-                ]
-    , TestCase $ assertEqual "gExponentiate on 1st complex int" ((-119 :: Integer) :+ (-120)) (gExponentiate (2 :+ 3) (4 :: Integer))
-    , TestCase $ assertEqual "gExponentiate on 2nd complex int" ((122 :: Integer) :+ (-597)) (gExponentiate (2 :+ 3) (5 :: Integer))
-    , TestList $ limit [ TestCase $ assertEqual "gFactorize, gMultiply, gExponentiate recover original GaussInt"
-                        g prod
-                | g <- sampleMixedGaussInts
-                , let factors = gFactorize g
-                , let condensedFactors = map (uncurry gExponentiate) factors
-                , let prod = foldl (.*) (1 :+ 0) condensedFactors
-                ]
     ]
 
 continuedFractionTests :: Test

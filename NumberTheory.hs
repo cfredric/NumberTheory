@@ -619,19 +619,28 @@ asSumOfSquares n = Set.toList . Set.fromList $
 -- the infinite list of coefficients consists of a finite sequence of coefficients
 -- followed by a (finite) sequence of coefficients that repeats indefinitely.
 -- NOTE: for performance reasons, each sequence is stored in reverse order.
-data ContinuedFraction = Finite [Integer] | Infinite ([Integer], [Integer])
+data ContinuedFraction = Zero | Finite Sign [Integer] | Infinite Sign [Integer] [Integer]
+
+data Sign = Negative | Positive
 
 finitePart :: ContinuedFraction -> [Integer]
-finitePart (Finite as) = reverse as
-finitePart (Infinite (fs, _)) = reverse fs
+finitePart Zero = []
+finitePart (Finite _ as) = reverse as
+finitePart (Infinite _ fs _) = reverse fs
 
 periodicPart :: ContinuedFraction -> [Integer]
-periodicPart (Finite _) = []
-periodicPart (Infinite (_, ps)) = reverse ps
+periodicPart Zero = []
+periodicPart (Finite _ _) = []
+periodicPart (Infinite _ _ ps) = reverse ps
 
 instance Show ContinuedFraction where
-    show (Finite as) = "Finite " ++ show (reverse as)
-    show (Infinite (as, ps)) = "Infinite " ++ show (reverse as) ++ show (reverse ps) ++ "..."
+    show Zero = "0"
+    show (Finite s as) = "Finite " ++ show s ++ show (reverse as)
+    show (Infinite s as ps) = "Infinite " ++ show s ++ show (reverse as) ++ show (reverse ps) ++ "..."
+
+instance Show Sign where
+    show Positive = "+"
+    show Negative = "-"
 
 -- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
 data Quadratic = Quad (Integer, Integer, Integer, Integer) deriving (Eq)
@@ -642,10 +651,10 @@ instance Show Quadratic where
 -- |Convert a Double to a (finite) continued fraction. This is inherently lossy.
 continuedFractionFromDouble :: forall a. (Integral a) => Double -> a -> ContinuedFraction
 continuedFractionFromDouble x precision
-    | precision < 1 = Finite []
+    | precision < 1 = Finite Positive []
     | otherwise     =
         let ts = getTs (fractionalPart x) precision
-        in Finite $ reverse $ integralPart x : map (integralPart . recip) (filter (/= 0) ts)
+        in Finite Positive $ reverse $ integralPart x : map (integralPart . recip) (filter (/= 0) ts)
     where
     integralPart :: Double -> Integer
     integralPart n = fst $ properFraction n
@@ -681,7 +690,7 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
                     as = map third ts
                 in case elemIndex (mn, qn, an) ts of
                     -- We've hit the first repetition of the period
-                    Just idx -> Infinite (drop (idx + 1) as, take (idx + 1) as)
+                    Just idx -> Infinite Positive (drop (idx + 1) as) (take (idx + 1) as)
                     -- Haven't hit the end of the period yet, keep going as usual
                     Nothing  -> helper $ (mn, qn, an) : ts
             third :: (a, b, c) -> c
@@ -697,8 +706,8 @@ continuedFractionFromQuadratic (Quad (m0, c, d, q0))
 continuedFractionToRational :: ContinuedFraction -> Rational
 continuedFractionToRational frac =
     let list = case frac of
-            Finite as              -> as
-            Infinite (as, periods) -> (reverse . take 35 $ cycle (reverse periods)) ++ as
+            Finite Positive as              -> as
+            Infinite Positive as periods -> (reverse . take 35 $ cycle (reverse periods)) ++ as
         collapse :: Rational -> Integer -> Rational
         collapse !rat !ai = (ai % 1) + (1 / rat)
     in foldl' collapse (head list % 1) (tail list)
@@ -706,11 +715,11 @@ continuedFractionToRational frac =
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
 continuedFractionFromRational :: Rational -> ContinuedFraction
 continuedFractionFromRational rat
-    | denominator rat == 1    = Finite [numerator rat]
-    | numerator fracPart == 1 = Finite $ reverse [intPart, denominator fracPart]
+    | denominator rat == 1    = Finite Positive [numerator rat]
+    | numerator fracPart == 1 = Finite Positive $ reverse [intPart, denominator fracPart]
     | otherwise               =
-        let Finite trail = continuedFractionFromRational (1 / fracPart)
-        in Finite (trail ++ [intPart])
+        let Finite Positive trail = continuedFractionFromRational (1 / fracPart)
+        in Finite Positive (trail ++ [intPart])
     where
     intPart = numerator rat `div` denominator rat
     fracPart = rat - (intPart % 1)
@@ -730,10 +739,10 @@ reduceBinomials (fn, fd) (sn, sd) =
 
 -- |Convert a continued fraction to a quadratic number.
 continuedFractionToQuadratic :: ContinuedFraction -> Quadratic
-continuedFractionToQuadratic frac@(Finite _) =
+continuedFractionToQuadratic frac@(Finite Positive _) =
     let rat = continuedFractionToRational frac
     in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
-continuedFractionToQuadratic (Infinite (fs, ps))
+continuedFractionToQuadratic (Infinite Positive fs ps)
     | null fs   =
         let collapsePeriodicLevel :: (Integral a) => (Binomial a, Binomial a) -> a -> (Binomial a, Binomial a)
             collapsePeriodicLevel (num@(!nx, !nu), (!dx, !du)) !p = ((p * nx + dx, p * nu + du), num)
@@ -744,7 +753,7 @@ continuedFractionToQuadratic (Infinite (fs, ps))
             q = 2 * j
         in reduceQuad $ Quad (m, c, d, q)
     | otherwise =
-        let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite ([], ps)
+        let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite Positive [] ps
             collapseFiniteLevel :: Quadratic -> Integer -> Quadratic
             collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
             quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
