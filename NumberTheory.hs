@@ -88,6 +88,7 @@ import qualified Data.Numbers.Primes  as Primes (primes)
 import           Data.Ratio                     ((%), denominator, numerator)
 import qualified Data.Set             as Set    (fromList, Set, size, toList)
 import qualified Math.NumberTheory.Primes.Factorisation as F (factorise)
+import qualified Math.NumberTheory.Powers as Pow
 
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
@@ -677,7 +678,7 @@ continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
     | c == 0                            = continuedFractionFromRational (m0 % q0)
     | c /= 1                            = continuedFractionFromQuadratic $ condense quad
-    | isIntegral $ sqrti d              = continuedFractionFromRational ((m0 + (floor . sqrti $ d)) % q0)
+    | Pow.isSquare d                    = continuedFractionFromRational ((m0 + Pow.integerSquareRoot d) % q0)
     | not . isIntegral $ getNextQ m0 q0 = continuedFractionFromQuadratic (Quad (m0 * q0, c, d * q0 * q0, q0 * q0))
     | otherwise                         = caller quad
     where
