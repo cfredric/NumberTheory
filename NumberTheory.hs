@@ -684,6 +684,7 @@ continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
     | m0 < 0 && c < 0                   = negateCF . continuedFractionFromQuadratic $ negateQuad quad
+    | m0 == 0 && c == 0                  = Zero
     | (fixCoefficients . condense . reduceQuad) quad /= quad = continuedFractionFromQuadratic . fixCoefficients . condense $ reduceQuad quad
     | c == 0                            = continuedFractionFromRational (m0 % q0)
     | Pow.isSquare d                    = continuedFractionFromRational ((m0 + Pow.integerSquareRoot d) % q0)
