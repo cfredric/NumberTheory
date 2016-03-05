@@ -4,9 +4,12 @@ import Data.List
 import qualified Data.Numbers.Primes as Primes
 import NumberTheory
 import Test.HUnit
+import System.Exit
 
 main :: IO Counts
-main = runTestTT tests
+main = do
+    results <- runTestTT tests
+    exitWith (if errors results + failures results == 0 then ExitSuccess else ExitFailure 1)
 
 tests :: Test
 tests = TestList
