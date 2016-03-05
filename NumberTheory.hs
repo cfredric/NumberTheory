@@ -728,14 +728,13 @@ continuedFractionToRational :: ContinuedFraction -> Rational
 continuedFractionToRational Zero = 0
 continuedFractionToRational f@(Finite Negative _) = negate . continuedFractionToRational $ negateCF f
 continuedFractionToRational f@(Infinite Negative _ _) = negate . continuedFractionToRational $ negateCF f
-continuedFractionToRational frac =
-    let list = case frac of
-            Finite Positive as              -> as
-            Infinite Positive as periods -> (reverse . take 35 $ cycle (reverse periods)) ++ as
-            _ -> error "unreachable"
-        collapse :: Rational -> Integer -> Rational
-        collapse !rat !ai = (ai % 1) + (1 / rat)
-    in foldl' collapse (head list % 1) (tail list)
+continuedFractionToRational (Finite Positive as) = folder as
+continuedFractionToRational (Infinite Positive as ps) = folder ((reverse . take 35 $ cycle (reverse ps)) ++ as)
+
+collapse :: Rational -> Integer -> Rational
+collapse !rat !ai = (ai % 1) + (1 / rat)
+folder :: [Integer] -> Rational
+folder ks = foldl' collapse (head ks % 1) (tail ks)
 
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
 continuedFractionFromRational :: Rational -> ContinuedFraction
