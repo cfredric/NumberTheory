@@ -650,6 +650,7 @@ instance Show Quadratic where
     show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
 
 negateCF :: ContinuedFraction -> ContinuedFraction
+negateCF Zero = Zero
 negateCF (Finite Positive as) = Finite Negative as
 negateCF (Infinite Positive as ps) = Infinite Negative as ps
 negateCF (Finite Negative as) = Finite Positive as
@@ -682,13 +683,7 @@ continuedFractionFromDouble x precision
 continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
     | q0 == 0                           = error "Cannot divide by 0"
-    | m0 < 0 && c < 0                   =
-        let cf = continuedFractionFromQuadratic (Quad (-m0, -c, d, q0))
-        in case cf of
-            Zero -> Zero
-            Finite Positive as -> Finite Negative as
-            Infinite Positive as ps -> Infinite Negative as ps
-            _ -> error "Got negative fraction when we expected a positive one"
+    | m0 < 0 && c < 0                   = negateCF . continuedFractionFromQuadratic $ negateQuad quad
     | (fixCoefficients . condense . reduceQuad) quad /= quad = continuedFractionFromQuadratic . fixCoefficients . condense $ reduceQuad quad
     | c == 0                            = continuedFractionFromRational (m0 % q0)
     | Pow.isSquare d                    = continuedFractionFromRational ((m0 + Pow.integerSquareRoot d) % q0)
@@ -737,6 +732,7 @@ continuedFractionToRational frac =
     let list = case frac of
             Finite Positive as              -> as
             Infinite Positive as periods -> (reverse . take 35 $ cycle (reverse periods)) ++ as
+            _ -> error "unreachable"
         collapse :: Rational -> Integer -> Rational
         collapse !rat !ai = (ai % 1) + (1 / rat)
     in foldl' collapse (head list % 1) (tail list)
