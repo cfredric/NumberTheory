@@ -649,6 +649,12 @@ data Quadratic = Quad (Integer, Integer, Integer, Integer) deriving (Eq)
 instance Show Quadratic where
     show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
 
+negateCF :: ContinuedFraction -> ContinuedFraction
+negateCF (Finite Positive as) = Finite Negative as
+negateCF (Infinite Positive as ps) = Infinite Negative as ps
+negateCF (Finite Negative as) = Finite Positive as
+negateCF (Infinite Negative as ps) = Infinite Positive as ps
+
 -- |Convert a Double to a (finite) continued fraction. This is inherently lossy.
 continuedFractionFromDouble :: forall a. (Integral a) => Double -> a -> ContinuedFraction
 continuedFractionFromDouble x precision
@@ -724,6 +730,9 @@ third (_, _, !x) = x
 -- then this is an exact conversion. If the fraction is infinite, this conversion
 -- is necessarily lossy, since the fraction does not represent a rational number.
 continuedFractionToRational :: ContinuedFraction -> Rational
+continuedFractionToRational Zero = 0
+continuedFractionToRational f@(Finite Negative _) = negate . continuedFractionToRational $ negateCF f
+continuedFractionToRational f@(Infinite Negative _ _) = negate . continuedFractionToRational $ negateCF f
 continuedFractionToRational frac =
     let list = case frac of
             Finite Positive as              -> as
@@ -734,7 +743,9 @@ continuedFractionToRational frac =
 
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
 continuedFractionFromRational :: Rational -> ContinuedFraction
+continuedFractionFromRational 0 = Zero
 continuedFractionFromRational rat
+    | rat < 0                 = negateCF $ continuedFractionFromRational (-rat)
     | denominator rat == 1    = Finite Positive [numerator rat]
     | numerator fracPart == 1 = Finite Positive $ reverse [intPart, denominator fracPart]
     | otherwise               =
@@ -759,6 +770,9 @@ reduceBinomials (fn, fd) (sn, sd) =
 
 -- |Convert a continued fraction to a quadratic number.
 continuedFractionToQuadratic :: ContinuedFraction -> Quadratic
+continuedFractionToQuadratic Zero = Quad (0, 0, 0, 1)
+continuedFractionToQuadratic frac@(Finite Negative _) = negateQuad . continuedFractionToQuadratic $ negateCF frac
+continuedFractionToQuadratic frac@(Infinite Negative _ _) = negateQuad . continuedFractionToQuadratic $ negateCF frac
 continuedFractionToQuadratic frac@(Finite Positive _) =
     let rat = continuedFractionToRational frac
     in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
@@ -778,6 +792,9 @@ continuedFractionToQuadratic (Infinite Positive fs ps)
             collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
             quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
         in reduceQuad quad
+
+negateQuad :: Quadratic -> Quadratic
+negateQuad (Quad (m, c, d, q)) = Quad (-m, -c, d, q)
 
 reduceQuad :: Quadratic -> Quadratic
 reduceQuad (Quad (m, c, d, q))
