@@ -652,9 +652,9 @@ instance Num ContinuedFraction where
     signum cf = case cf of
         Zero                  -> Zero
         Finite Positive _     -> 1
-        Finite Negative _     -> fromInteger (-1)
+        Finite Negative _     -> -1
         Infinite Positive _ _ -> 1
-        _                     -> fromInteger (-1)
+        _                     -> -1
     abs cf = case cf of
         Finite _ as      -> Finite Positive as
         Infinite _ as ps -> Infinite Positive as ps
