@@ -681,23 +681,20 @@ continuedFractionFromDouble x precision
 
 -- |Convert a quadratic number to its continued fraction representation.
 continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
-continuedFractionFromQuadratic quad@(Quad (m0, c, d, q0))
-    | q0 == 0                           = error "Cannot divide by 0"
-    | m0 == 0 && c == 0                 = Zero
-    | m0 < 0 && c < 0                   = negateCF . continuedFractionFromQuadratic $ negateQuad quad
-    | signum m0 * signum c == -1
-    && (if c < 0 then (<) else (>)) (m0 * m0 - c * c * d) 0
-                                        = negateCF . continuedFractionFromQuadratic $ negateQuad quad
-    | signum m0 * signum c == -1        = error "mismatched signs, unimplemented"
-    | (fixCoefficients . condense . reduceQuad) quad /= quad = continuedFractionFromQuadratic . fixCoefficients . condense $ reduceQuad quad
-    | c == 0                            = continuedFractionFromRational (m0 % q0)
-    | Pow.isSquare d                    = continuedFractionFromRational ((m0 + Pow.integerSquareRoot d) % q0)
-    | otherwise                         = caller quad
+continuedFractionFromQuadratic quad
+    | q == 0                    = error "Cannot divide by 0"
+    | m == 0 && c == 0          = Zero
+    | m < 0 && c < 0            = negateCF . continuedFractionFromQuadratic $ negateQuad quad
+    | signum m * signum c == -1
+    && (if c < 0 then (<) else (>)) (m * m - c * c * d) 0
+                                = negateCF . continuedFractionFromQuadratic $ negateQuad quad
+    | signum m * signum c == -1 = error "mismatched signs, unimplemented"
+    | c == 0                    = continuedFractionFromRational (m % q)
+    | Pow.isSquare d            = continuedFractionFromRational ((m + Pow.integerSquareRoot d) % q)
+    | otherwise                 = let a = truncate $ (fromIntegral m + sqrti d) / fromIntegral q
+                                  in helper [(m, q, a)]
     where
-    caller :: Quadratic -> ContinuedFraction
-    caller (Quad (m', _, d', q')) =
-        let a' = truncate $ (fromIntegral m' + sqrti d') / fromIntegral q'
-        in helper [(m', q', a')]
+    Quad (m, c, d, q) = fixCoefficients . condense $ reduceQuad quad
 
     helper :: [(Integer, Integer, Integer)] -> ContinuedFraction
     helper [] = error "improper call to helper function. This will never happen."
