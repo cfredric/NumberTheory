@@ -768,28 +768,26 @@ reduceBinomials (fn, fd) (sn, sd) =
 
 -- |Convert a continued fraction to a quadratic number.
 continuedFractionToQuadratic :: ContinuedFraction -> Quadratic
-continuedFractionToQuadratic Zero = Quad (0, 0, 0, 1)
-continuedFractionToQuadratic frac@(Finite Negative _) = negateQuad . continuedFractionToQuadratic $ negateCF frac
-continuedFractionToQuadratic frac@(Infinite Negative _ _) = negateQuad . continuedFractionToQuadratic $ negateCF frac
-continuedFractionToQuadratic frac@(Finite Positive _) =
-    let rat = continuedFractionToRational frac
-    in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
-continuedFractionToQuadratic (Infinite Positive fs ps)
-    | null fs   =
-        let collapsePeriodicLevel :: (Integral a) => (Binomial a, Binomial a) -> a -> (Binomial a, Binomial a)
-            collapsePeriodicLevel (num@(!nx, !nu), (!dx, !du)) !p = ((p * nx + dx, p * nu + du), num)
-            ((a, b), (j, k)) = uncurry reduceBinomials $ foldl' collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
-            d = a * a - 2 * a * k + 4 * b * j + k * k
-            c = 1
-            m = a - k
-            q = 2 * j
-        in reduceQuad $ Quad (m, c, d, q)
-    | otherwise =
-        let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite Positive [] ps
-            collapseFiniteLevel :: Quadratic -> Integer -> Quadratic
-            collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
-            quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
-        in reduceQuad quad
+continuedFractionToQuadratic f = case f of
+    Zero                    -> Quad (0, 0, 0, 1)
+    Finite Negative _       -> negateQuad . continuedFractionToQuadratic $ negateCF f
+    Infinite Negative _ _   -> negateQuad . continuedFractionToQuadratic $ negateCF f
+    Finite Positive _       -> let rat = continuedFractionToRational f
+                               in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
+    Infinite Positive fs ps -> if null fs
+        then let collapsePeriodicLevel :: (Integral a) => (Binomial a, Binomial a) -> a -> (Binomial a, Binomial a)
+                 collapsePeriodicLevel (num@(!nx, !nu), (!dx, !du)) !p = ((p * nx + dx, p * nu + du), num)
+                 ((a, b), (j, k)) = uncurry reduceBinomials $ foldl' collapsePeriodicLevel ((head ps, 1), (1, 0)) (tail ps)
+                 d = a * a - 2 * a * k + 4 * b * j + k * k
+                 c = 1
+                 m = a - k
+                 q = 2 * j
+             in reduceQuad $ Quad (m, c, d, q)
+        else let (Quad (m, c, d, q)) = continuedFractionToQuadratic $ Infinite Positive [] ps
+                 collapseFiniteLevel :: Quadratic -> Integer -> Quadratic
+                 collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
+                 quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
+             in reduceQuad quad
 
 negateQuad :: Quadratic -> Quadratic
 negateQuad (Quad (m, c, d, q)) = Quad (-m, -c, d, q)
