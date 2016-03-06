@@ -88,7 +88,6 @@ import qualified Data.Numbers.Primes  as Primes (primes)
 import           Data.Ratio                     ((%), denominator, numerator)
 import qualified Data.Set             as Set    (fromList, Set, size, toList)
 import qualified Math.NumberTheory.Primes.Factorisation as F (factorise)
-import qualified Math.NumberTheory.Powers as Pow
 
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
@@ -688,14 +687,12 @@ continuedFractionFromQuadratic quad
     | signum m * signum c == -1
     && (if c < 0 then (<) else (>)) (m * m - c * c * d) 0
                                 = negateCF . continuedFractionFromQuadratic $ negateQuad quad
-    | c == 0                    = continuedFractionFromRational (m % q)
-    | Pow.isSquare d            = continuedFractionFromRational ((m + Pow.integerSquareRoot d) % q)
+    | c == 0 || d == 0          = continuedFractionFromRational (m % q)
     | signum m * signum c == -1 = error "mismatched signs, unimplemented"
-    | otherwise                 = let a = truncate $ (fromIntegral m + sqrti d) / fromIntegral q
-                                  in helper [(m, q, a)]
+    | otherwise                 = helper [(m, q, a)]
     where
     Quad (m, c, d, q) = fixCoefficients . condense $ reduceQuad quad
-
+    a = truncate $ (fromIntegral m + sqrti d) / fromIntegral q
     helper :: [(Integer, Integer, Integer)] -> ContinuedFraction
     helper [] = error "improper call to helper function. This will never happen."
     helper ts@((!mp, !qp, !ap) : _) =
