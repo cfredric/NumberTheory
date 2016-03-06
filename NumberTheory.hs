@@ -727,16 +727,17 @@ third (_, _, !x) = x
 -- then this is an exact conversion. If the fraction is infinite, this conversion
 -- is necessarily lossy, since the fraction does not represent a rational number.
 continuedFractionToRational :: ContinuedFraction -> Rational
-continuedFractionToRational Zero = 0
-continuedFractionToRational f@(Finite Negative _) = negate . continuedFractionToRational $ negateCF f
-continuedFractionToRational f@(Infinite Negative _ _) = negate . continuedFractionToRational $ negateCF f
-continuedFractionToRational (Finite Positive as) = folder as
-continuedFractionToRational (Infinite Positive as ps) = folder ((reverse . take 35 $ cycle (reverse ps)) ++ as)
-
-collapse :: Rational -> Integer -> Rational
-collapse !rat !ai = (ai % 1) + (1 / rat)
-folder :: [Integer] -> Rational
-folder ks = foldl' collapse (head ks % 1) (tail ks)
+continuedFractionToRational f = case f of
+    Zero                    -> 0
+    Finite Negative _       -> negate . continuedFractionToRational $ negateCF f
+    Infinite Negative _ _   -> negate . continuedFractionToRational $ negateCF f
+    Finite Positive as      -> folder as
+    Infinite Positive as ps -> folder ((reverse . take 35 $ cycle (reverse ps)) ++ as)
+    where
+    collapse :: Rational -> Integer -> Rational
+    collapse !rat !ai = (ai % 1) + (1 / rat)
+    folder :: [Integer] -> Rational
+    folder ks = foldl' collapse (head ks % 1) (tail ks)
 
 -- |Convert a rational number to a continued fraction. This is an exact conversion.
 continuedFractionFromRational :: Rational -> ContinuedFraction
