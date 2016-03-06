@@ -684,13 +684,13 @@ continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad
     | q == 0                    = error "Cannot divide by 0"
     | m == 0 && c == 0          = Zero
-    | m < 0 && c < 0            = negateCF . continuedFractionFromQuadratic $ negateQuad quad
+    | m <= 0 && c <= 0          = negateCF . continuedFractionFromQuadratic $ negateQuad quad
     | signum m * signum c == -1
     && (if c < 0 then (<) else (>)) (m * m - c * c * d) 0
                                 = negateCF . continuedFractionFromQuadratic $ negateQuad quad
-    | signum m * signum c == -1 = error "mismatched signs, unimplemented"
     | c == 0                    = continuedFractionFromRational (m % q)
     | Pow.isSquare d            = continuedFractionFromRational ((m + Pow.integerSquareRoot d) % q)
+    | signum m * signum c == -1 = error "mismatched signs, unimplemented"
     | otherwise                 = let a = truncate $ (fromIntegral m + sqrti d) / fromIntegral q
                                   in helper [(m, q, a)]
     where
