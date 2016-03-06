@@ -642,6 +642,30 @@ instance Show Sign where
     show Positive = "+"
     show Negative = "-"
 
+instance Num ContinuedFraction where
+    (+) = error "Cannot add continued fractions"
+    (*) = error "Cannot multiply continued fractions"
+    fromInteger n = case signum n of
+        0  -> Zero
+        1  -> Finite Positive [n]
+        _ -> Finite Negative [n]
+    signum cf = case cf of
+        Zero                  -> Zero
+        Finite Positive _     -> 1
+        Finite Negative _     -> fromInteger (-1)
+        Infinite Positive _ _ -> 1
+        _                     -> fromInteger (-1)
+    abs cf = case cf of
+        Finite _ as      -> Finite Positive as
+        Infinite _ as ps -> Infinite Positive as ps
+        _                -> Zero
+    negate cf = case cf of
+        Finite Positive as -> Finite Negative as
+        Finite Negative as -> Finite Positive as
+        Infinite Positive as ps -> Infinite Negative as ps
+        Infinite Negative as ps -> Infinite Positive as ps
+        _ -> Zero
+
 -- |Quadratic number datatype. (m, c, d, q) represents (m + c*sqrt(d))/q.
 data Quadratic = Quad (Integer, Integer, Integer, Integer) deriving (Eq)
 
@@ -667,13 +691,6 @@ instance Num Quadratic where
         | otherwise = fromInteger $ signum m
     fromInteger x = Quad (x, 0, 0, 1)
     negate (Quad (m, c, d, q)) = Quad (-m , -c, d, q)
-
-negateCF :: ContinuedFraction -> ContinuedFraction
-negateCF Zero = Zero
-negateCF (Finite Positive as) = Finite Negative as
-negateCF (Infinite Positive as ps) = Infinite Negative as ps
-negateCF (Finite Negative as) = Finite Positive as
-negateCF (Infinite Negative as ps) = Infinite Positive as ps
 
 -- |Convert a Double to a (finite) continued fraction. This is inherently lossy.
 continuedFractionFromDouble :: forall a. (Integral a) => Double -> a -> ContinuedFraction
@@ -703,7 +720,7 @@ continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad
     | q == 0                    = error "Cannot divide by 0"
     | m == 0 && c == 0          = Zero
-    | signum quad == -1         = negateCF . continuedFractionFromQuadratic $ negate quad
+    | signum quad == -1         = negate . continuedFractionFromQuadratic $ negate quad
     | c == 0 || d == 0          = continuedFractionFromRational (m % q)
     | signum m * signum c == -1 = error "mismatched signs, unimplemented"
     | otherwise                 = helper [(m, q, a)]
@@ -743,8 +760,8 @@ third (_, _, !x) = x
 continuedFractionToRational :: ContinuedFraction -> Rational
 continuedFractionToRational f = case f of
     Zero                    -> 0
-    Finite Negative _       -> negate . continuedFractionToRational $ negateCF f
-    Infinite Negative _ _   -> negate . continuedFractionToRational $ negateCF f
+    Finite Negative _       -> negate . continuedFractionToRational $ negate f
+    Infinite Negative _ _   -> negate . continuedFractionToRational $ negate f
     Finite Positive as      -> folder as
     Infinite Positive as ps -> folder ((reverse . take 35 $ cycle (reverse ps)) ++ as)
     where
@@ -757,7 +774,7 @@ continuedFractionToRational f = case f of
 continuedFractionFromRational :: Rational -> ContinuedFraction
 continuedFractionFromRational 0 = Zero
 continuedFractionFromRational rat
-    | rat < 0                 = negateCF $ continuedFractionFromRational (-rat)
+    | rat < 0                 = negate $ continuedFractionFromRational (-rat)
     | denominator rat == 1    = Finite Positive [numerator rat]
     | numerator fracPart == 1 = Finite Positive $ reverse [intPart, denominator fracPart]
     | otherwise               =
@@ -784,8 +801,8 @@ reduceBinomials (fn, fd) (sn, sd) =
 continuedFractionToQuadratic :: ContinuedFraction -> Quadratic
 continuedFractionToQuadratic f = case f of
     Zero                    -> Quad (0, 0, 0, 1)
-    Finite Negative _       -> negate . continuedFractionToQuadratic $ negateCF f
-    Infinite Negative _ _   -> negate . continuedFractionToQuadratic $ negateCF f
+    Finite Negative _       -> negate . continuedFractionToQuadratic $ negate f
+    Infinite Negative _ _   -> negate . continuedFractionToQuadratic $ negate f
     Finite Positive _       -> let rat = continuedFractionToRational f
                                in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
     Infinite Positive fs ps -> if null fs
