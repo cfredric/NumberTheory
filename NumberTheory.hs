@@ -648,6 +648,26 @@ data Quadratic = Quad (Integer, Integer, Integer, Integer) deriving (Eq)
 instance Show Quadratic where
     show (Quad (m, c, d, q)) = "(" ++ show m ++ " + " ++ show c ++ "*sqrt(" ++ show d ++ ")) / " ++ show q
 
+instance Num Quadratic where
+    (Quad (m, c, d, q)) + (Quad (m', c', d', q'))
+        | d == d' = Quad (m * q' + m' * q, c * q' + c' * q, d, q * q')
+        | otherwise = error "cannot add inequal radicals"
+    (Quad (m, c, d, q)) * (Quad (m', c', d', q'))
+        | d == d' = Quad (m * m' + c * c' * d, m * c' + m' * c, d, q * q')
+        | otherwise = error "cannot multiply inequal radicals"
+    abs (Quad (m, c, d, q)) = Quad (abs m, abs c, abs d, abs q)
+    signum (Quad (m, c, d, q))
+        | q < 0            = negate $ signum (Quad (m, c, d, -q))
+        | m == 0 && c == 0 = Quad (0, 0, 0, 1)
+        | m == 0           = fromInteger $ signum c
+        | c == 0           = fromInteger $ signum m
+        | signum m * signum c == -1
+        && (if c < 0 then (<) else (>))
+            (m * m - c * c * d) 0 = -1
+        | otherwise = fromInteger $ signum m
+    fromInteger x = Quad (x, 0, 0, 1)
+    negate (Quad (m, c, d, q)) = Quad (-m , -c, d, q)
+
 negateCF :: ContinuedFraction -> ContinuedFraction
 negateCF Zero = Zero
 negateCF (Finite Positive as) = Finite Negative as
@@ -683,10 +703,7 @@ continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad
     | q == 0                    = error "Cannot divide by 0"
     | m == 0 && c == 0          = Zero
-    | m <= 0 && c <= 0          = negateCF . continuedFractionFromQuadratic $ negateQuad quad
-    | signum m * signum c == -1
-    && (if c < 0 then (<) else (>)) (m * m - c * c * d) 0
-                                = negateCF . continuedFractionFromQuadratic $ negateQuad quad
+    | signum quad == -1         = negateCF . continuedFractionFromQuadratic $ negate quad
     | c == 0 || d == 0          = continuedFractionFromRational (m % q)
     | signum m * signum c == -1 = error "mismatched signs, unimplemented"
     | otherwise                 = helper [(m, q, a)]
@@ -767,8 +784,8 @@ reduceBinomials (fn, fd) (sn, sd) =
 continuedFractionToQuadratic :: ContinuedFraction -> Quadratic
 continuedFractionToQuadratic f = case f of
     Zero                    -> Quad (0, 0, 0, 1)
-    Finite Negative _       -> negateQuad . continuedFractionToQuadratic $ negateCF f
-    Infinite Negative _ _   -> negateQuad . continuedFractionToQuadratic $ negateCF f
+    Finite Negative _       -> negate . continuedFractionToQuadratic $ negateCF f
+    Infinite Negative _ _   -> negate . continuedFractionToQuadratic $ negateCF f
     Finite Positive _       -> let rat = continuedFractionToRational f
                                in reduceQuad $ Quad (numerator rat, 0, 0, denominator rat)
     Infinite Positive fs ps -> if null fs
@@ -785,9 +802,6 @@ continuedFractionToQuadratic f = case f of
                  collapseFiniteLevel (Quad (!m', !c', !d', !q')) !a = Quad (a * m' * m' + q' * m' - a * c' * c' * d', (-q') * c', d', m' * m' - c' * c' * d')
                  quad = foldl' collapseFiniteLevel (Quad (m, c, d, q)) fs
              in reduceQuad quad
-
-negateQuad :: Quadratic -> Quadratic
-negateQuad (Quad (m, c, d, q)) = Quad (-m, -c, d, q)
 
 reduceQuad :: Quadratic -> Quadratic
 reduceQuad (Quad (m, c, d, q))
