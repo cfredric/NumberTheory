@@ -719,7 +719,7 @@ continuedFractionFromDouble x precision
 continuedFractionFromQuadratic :: Quadratic -> ContinuedFraction
 continuedFractionFromQuadratic quad
     | q == 0                    = error "Cannot divide by 0"
-    | m == 0 && c == 0          = Zero
+    | quad == 0                 = Zero
     | signum quad == -1         = negate . continuedFractionFromQuadratic $ negate quad
     | c == 0 || d == 0          = continuedFractionFromRational (m % q)
     | signum m * signum c == -1 = error "mismatched signs, unimplemented"
