@@ -3,6 +3,9 @@
 -- in Z mod m (henceforth also written Zm), Z, Z x Zi (the Gaussian integers),
 -- and some computations with continued fractions.
 module NumberTheory (
+    -- text conversions
+    toText,
+    fromText,
     -- pythagorean triples
     pythSide,
     pythLeg,
@@ -14,6 +17,7 @@ module NumberTheory (
     evalPoly,
     polyCong,
     exponentiate,
+    invert,
     rsaGenKeys,
     rsaEval,
     units,
@@ -81,6 +85,7 @@ module NumberTheory (
     quadToFloating
 ) where
 
+import           Data.Char                      (chr, ord)
 import           Data.Foldable                  (foldl')
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
 import qualified Data.Map             as Map    (fromListWith, toList)
@@ -88,6 +93,18 @@ import qualified Data.Numbers.Primes  as Primes (primes)
 import           Data.Ratio                     ((%), denominator, numerator)
 import qualified Data.Set             as Set    (fromList, Set, size, toList)
 import qualified Math.NumberTheory.Primes.Factorisation as F (factorise)
+
+-- |Converts a number to text.
+toText :: Integral a => a -> String
+toText n = go n ""
+    where
+    go :: Integral a => a -> String -> String
+    go 0 str = str
+    go n str = go (n `div` 256) ((chr . fromIntegral $ (n `mod` 256)) : str)
+
+-- |Converts a String to a numeric representation.
+fromText :: Integral a => String -> a
+fromText = foldl' (\n c -> n * 256 + fromIntegral (ord c)) 0
 
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
@@ -219,7 +236,6 @@ totient n
 primes :: Integral a => a -> [a]
 primes = map fst . nonUnitFactorize
 
-
 -- |Compute if n is prime.
 isPrime :: Integral a => a -> Bool
 isPrime n = n `elem` takeWhile (<= n) (dropWhile (< n) Primes.primes)
@@ -258,6 +274,15 @@ exponentiate a e m
     q = exponentiate a (e - 1) m
     us = units m
     ul = genericLength us
+
+-- |Compute the inverse of a in Zm. This assumes that an inverse exists.
+invert :: Integral a => a -> a -> a
+invert a m = go 0 1 m a
+    where
+    go t _ _ 0 = if t < 0 then t + m else t
+    go t newT r newR =
+        let quotient = r `div` newR
+        in go newT (t - quotient * newT) newR (r - quotient * newR)
 
 -- |A type to represent a public or private key.
 type Key a = (a, a)
