@@ -36,9 +36,9 @@ samplePrimes :: [Integer]
 samplePrimes = takeWhile (<= last sampleMixed) Primes.primes
 sampleComposites :: [Integer]
 sampleComposites = filter (not . flip elem samplePrimes) sampleMixed
-sampleMixedGaussInts :: [GaussInt Integer]
+sampleMixedGaussInts :: [GaussInt]
 sampleMixedGaussInts = [a :+ b | a <- [-25 .. 25], b <- [-25 .. 25]]
-sampleQuadratics :: [Quadratic Integer]
+sampleQuadratics :: [Quadratic]
 sampleQuadratics = [Quad (m, c, d, q) | m <- [0 .. 5], c <- [0 .. 10], d <- [0 .. 10], q <- [1 .. 10]]
 
 zTests :: Test
@@ -191,26 +191,25 @@ gaussianIntTests = TestList
     , TestCase $ assertBool "gIsPrime on prime" (gIsPrime ((2 :: Integer) :+ 5))
     , TestCase $ assertBool "gIsPrime on composite" (not $ gIsPrime ((3 :: Integer) :+ 5))
     , TestList $ limit [ TestCase $ assertBool "gPrimes generates primes" (gIsPrime p)
-                | p <- take 100 (gPrimes :: [GaussInt Integer])
+                | p <- take 100 gPrimes
                 ]
     , TestCase $ assertEqual "gGCD on even multiple" ((2 :: Integer) :+ 4) (gGCD (2 :+ 4) (12 :+ 24))
     , TestCase $ assertEqual "gGCD on uneven multiple" ((1 :: Integer) :+ 1) (gGCD (2 :+ 4) (5 :+ 3))
     , TestCase $ assertBool "gGCD on uneven multiple (division rounding test)"
-            (gGCD ((12::Int) :+ 23) (23 :+ 34) `elem` [x :+ y | x <- [(-1)..1], y <- [(-1)..1], abs x + abs y == 1])
-    , TestCase $ assertBool "gFindPrime 5" (head (gFindPrime (5::Int)) `elem` [ a :+ b | a <- [2, -2], b <- [1, -1]])
-    , TestCase $ assertEqual "gFindPrime 7" [] (gFindPrime (7::Int))
-    , TestList $ limit [ TestCase $ assertEqual "gExponentiate on real ints" ((a ^ pow) :+ 0) (gExponentiate g pow)
+            (gGCD (12 :+ 23) (23 :+ 34) `elem` [x :+ y | x <- [(-1)..1], y <- [(-1)..1], abs x + abs y == 1])
+    , TestCase $ assertBool "gFindPrime 5" (gFindPrime 5 `elem` [ a :+ b | a <- [2, -2], b <- [1, -1]])
+    , TestList $ limit [ TestCase $ assertEqual "Gaussian Exponentiation on real ints" ((a ^ pow) :+ 0) (g .^ pow)
                 | a <- sampleMixed
                 , pow <- [1 .. 5] :: [Integer]
                 , let g = a :+ 0
                 ]
-    , TestCase $ assertEqual "gExponentiate on 1st complex int" ((-119 :: Integer) :+ (-120)) (gExponentiate (2 :+ 3) (4 :: Integer))
-    , TestCase $ assertEqual "gExponentiate on 2nd complex int" ((122 :: Integer) :+ (-597)) (gExponentiate (2 :+ 3) (5 :: Integer))
-    , TestList $ limit [ TestCase $ assertEqual "gFactorize, gMultiply, gExponentiate recover original GaussInt"
+    , TestCase $ assertEqual ".^ on 1st complex int" ((-119 :: Integer) :+ (-120)) ((2 :+ 3) .^ 4)
+    , TestCase $ assertEqual ".^ on 2nd complex int" ((122 :: Integer) :+ (-597)) ((2 :+ 3) .^ 5)
+    , TestList $ limit [ TestCase $ assertEqual "gFactorize, gMultiply, .^ recover original GaussInt"
                         g prod
                 | g <- sampleMixedGaussInts
                 , let factors = gFactorize g
-                , let condensedFactors = map (uncurry gExponentiate) factors
+                , let condensedFactors = map (uncurry (.^)) factors
                 , let prod = foldl (.*) (1 :+ 0) condensedFactors
                 ]
     ]
