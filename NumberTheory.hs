@@ -347,9 +347,12 @@ almostRoots m = let unitCount = genericLength $ units m
 -- |Compute the order of x in Zm.
 order :: (Integral a) => a -> a -> a
 order x m = head [ ord
-                 | ord <- [1 .. genericLength $ units m]
-                 , exponentiate (canon x m) ord m == 1
+                 | ord <- [1 .. lus]
+                 , exponentiate x' ord m == 1
                  ]
+    where
+    lus = genericLength $ units m
+    x' = canon x m
 
 -- |Computes the orders of all units in Zm.
 orders :: (Integral a) => a -> [a]
@@ -378,8 +381,10 @@ expressAsRoots x m =
 powerCong :: (Integral a) => a -> a -> a -> [a]
 powerCong e k m = [ x
                   | x <- [1 .. m]
-                  , exponentiate x e m == canon k m
+                  , exponentiate x e m == k'
                   ]
+    where
+    k' = canon k m
 
 -- |Compute the integer log base B of k in Zm.
 -- Equivalently, given 2 elements of Zm, find what powers of b produce k, if any.
