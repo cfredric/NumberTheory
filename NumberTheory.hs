@@ -315,7 +315,11 @@ nilpotents m = filter (\n -> n `mod` prod == 0) [0 .. m - 1]
 
 -- |Compute the idempotent elements of Zm.
 idempotents :: Integral a => a -> [a]
-idempotents = flip polyCong [1, -1, 0]
+idempotents m = [ a
+                | a <- [0 .. m - 1]
+                , let a' = canon a m
+                , canon (a' * a') m == a'
+                ]
 
 -- |Compute the primitive roots of Zm.
 roots :: (Integral a) => a -> [a]
