@@ -309,14 +309,9 @@ units n = filter (areCoprime n) [1 .. n - 1]
 
 -- |Compute the nilpotent elements of Zm.
 nilpotents :: (Integral a) => a -> [a]
-nilpotents m
-    | r == 0    = []
-    | otherwise = [ n
-                  | n <- [0 .. m - 1]
-                  , let powers = map (\e -> exponentiate n e m) [1 .. r]
-                  , 0 `elem` powers
-                  ]
-    where r = genericLength $ units m
+nilpotents m = filter (\n -> n `mod` prod == 0) [0 .. m - 1]
+    where
+    prod = product $ primes m
 
 -- |Compute the idempotent elements of Zm.
 idempotents :: Integral a => a -> [a]
