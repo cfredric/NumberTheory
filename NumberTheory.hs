@@ -85,7 +85,7 @@ module NumberTheory (
     quadToFloating
 ) where
 
-import           Data.Char                      (chr, ord)
+import qualified Data.Char            as Char   (chr, ord)
 import           Data.Foldable                  (foldl')
 import           Data.List                      ((\\), elemIndex, genericLength, nub, sort)
 import qualified Data.Map             as Map    (fromListWith, toList)
@@ -100,11 +100,11 @@ toText n = go n ""
     where
     go :: Integral a => a -> String -> String
     go 0 str = str
-    go n str = go (n `div` 256) ((chr . fromIntegral $ (n `mod` 256)) : str)
+    go n' str = go (n' `div` 256) ((Char.chr . fromIntegral $ (n' `mod` 256)) : str)
 
 -- |Converts a String to a numeric representation.
 fromText :: Integral a => String -> a
-fromText = foldl' (\n c -> n * 256 + fromIntegral (ord c)) 0
+fromText = foldl' (\n c -> n * 256 + fromIntegral (Char.ord c)) 0
 
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
