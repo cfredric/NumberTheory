@@ -279,7 +279,8 @@ exponentiate a e m
 invert :: Integral a => a -> a -> a
 invert a m = go 0 1 m a
     where
-    go t _ _ 0 = if t < 0 then t + m else t
+    go t _ 1 0 = if t < 0 then t + m else t
+    go t _ r 0 = error "a is not invertible"
     go t newT r newR =
         let quotient = r `div` newR
         in go newT (t - quotient * newT) newR (r - quotient * newR)
