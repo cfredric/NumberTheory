@@ -296,7 +296,7 @@ rsaGenKeys p q
         | let n = p * q
               phi = totient n
         , e <- filter (areCoprime phi) [2 .. phi - 1]
-        , d <- polyCong phi [e, -1]
+        , let d = invert e phi
         ]
 
 -- |Use the given key to encode/decode the message or ciphertext.
