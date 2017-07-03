@@ -106,6 +106,16 @@ toText n = go n ""
 fromText :: Integral a => String -> a
 fromText = foldl' (\n c -> n * 256 + fromIntegral (Char.ord c)) 0
 
+uniqsFromSorted :: (Eq a) => [a] -> [a]
+uniqsFromSorted [] = []
+uniqsFromSorted [a] = [a]
+uniqsFromSorted (a:a':as) = go a (a':as)
+    where
+    go a [] = [a]
+    go a (a':as)
+        | a == a'   = go a as
+        | otherwise = a : go a' as
+
 -- |The canonical representation of x in Z mod m.
 canon :: Integral a => a -> a -> a
 canon x m
@@ -309,10 +319,25 @@ units :: Integral a => a -> [a]
 units n = filter (areCoprime n) [1 .. n - 1]
 
 -- |Compute the nilpotent elements of Zm.
-nilpotents :: (Integral a) => a -> [a]
-nilpotents m = filter (\n -> n `mod` prod == 0) [0 .. m - 1]
+nilpotents :: forall a. (Integral a) => a -> [a]
+nilpotents m = 0 : uniqsFromSorted (sort iteratedProducts)
     where
-    prod = product $ primes m
+    nonUnitFactors :: [(a, a)]
+    nonUnitFactors = nonUnitFactorize m
+    chooseExps :: (a, a) -> [(a, a)]
+    chooseExps (p, e) = [(p, e') | e' <- [1 .. e]]
+    expSelections :: [[(a, a)]]
+    expSelections = map chooseExps nonUnitFactors
+    enumeratedSelections :: [[(a, a)]]
+    enumeratedSelections = enumerate expSelections
+    products :: [a]
+    products = map (flip canon m . product . map (\(p, e) -> exponentiate p e m)) enumeratedSelections
+    nonZeroProducts :: [a]
+    nonZeroProducts = filter (/= 0) products
+    iterateProduct :: a -> [a]
+    iterateProduct p = takeWhile (/= 0) $ map (\n -> canon (n * p) m) [1 ..]
+    iteratedProducts :: [a]
+    iteratedProducts = concatMap iterateProduct nonZeroProducts
 
 -- |Compute the idempotent elements of Zm.
 idempotents :: Integral a => a -> [a]
