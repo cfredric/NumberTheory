@@ -320,7 +320,7 @@ units n = filter (areCoprime n) [1 .. n - 1]
 
 -- |Compute the nilpotent elements of Zm.
 nilpotents :: forall a. (Integral a) => a -> [a]
-nilpotents m = 0 : uniqsFromSorted (sort iteratedProducts)
+nilpotents m = 0 : uniqsFromSorted (nmerge iteratedProducts)
     where
     nonUnitFactors :: [(a, a)]
     nonUnitFactors = nonUnitFactorize m
@@ -336,8 +336,22 @@ nilpotents m = 0 : uniqsFromSorted (sort iteratedProducts)
     nonZeroProducts = filter (/= 0) products
     iterateProduct :: a -> [a]
     iterateProduct p = takeWhile (/= 0) $ map (\n -> canon (n * p) m) [1 ..]
-    iteratedProducts :: [a]
-    iteratedProducts = concatMap iterateProduct nonZeroProducts
+    iteratedProducts :: [[a]]
+    iteratedProducts = map iterateProduct nonZeroProducts
+
+-- Merges n sorted lists. General case of a 2-way merge.
+nmerge :: (Ord a) => [[a]] -> [a]
+nmerge [] = []
+nmerge xss
+    | any null xss = nmerge $ filter (not . null) xss
+    | otherwise    =
+        let indexedMins = zip (map head xss) [1..]
+            indexedLists = zip xss [1..]
+            (x, i) = foldl1 minAndIndex indexedMins
+            removeMin (xs, i') = if i == i' then tail xs else xs
+        in x : nmerge (map removeMin indexedLists)
+    where
+    minAndIndex (ax, ai) (x, i) = if x < ax then (x, i) else (ax, ai)
 
 -- |Compute the idempotent elements of Zm.
 idempotents :: Integral a => a -> [a]
